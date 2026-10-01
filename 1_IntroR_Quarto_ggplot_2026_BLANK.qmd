@@ -155,7 +155,7 @@ ggplot() # this line makes the space to put the plot, the background
 ```
 
 ```{r}
-ggplot() + 
+ggplot(candy_rankings) + 
   aes(x = chocolate) # this says what to put on the axes
 ```
 
@@ -232,14 +232,21 @@ More detail here, to not worry about yet. https://ggplot2.tidyverse.org/referenc
 
 1.  Are fruity candies cheaper? yes
 
-- Can you make a boxplot that shows the price percent depending on fruity?
+Can you make a boxplot that shows the price percent depending on fruity?
 
-  ```{r}
+```{r}
+  FruityPrice <- ggplot(candy_rankings) +
+    aes(x = fruity, y = pricepercent) +
+    geom_boxplot()
+  FruityPrice
+```
+
+```{r}
   fruityprice <- ggplot(candy_rankings) +
     aes(x = fruity, y = pricepercent) +
     geom_boxplot()
   fruityprice
-  ```
+```
 
 2.  Are sweeter candies more expensive? Do the candies with higher sugarpercent have higher winpercent? Plot this relationship.
 
@@ -252,23 +259,25 @@ Reference: bit.ly/colors-r
 You can change the color in the geom argument. Test out how it works on different geoms!
 
 ```{r}
-ggplot() +  
-  aes(x = ) + 
-  geom_bar(color = '', fill = ) 
+ggplot(candy_rankings) +  
+  aes(x = chocolate) + 
+  geom_bar(color = 'darkblue', fill = 'coral')
 ```
 
 If you want the color to reflect another variable, for example, if there is fruit in the candy too, then you make it a **mapped aesthetic**, or one that refers to some data to assign a visual. In this case, you place the **color** or **fill** argument **inside aes().**
 
 ```{r}
-ggplot() +  
-  aes(x = , fill = ) + 
-  geom_bar(position = ) 
+ggplot(candy_rankings) +  
+  aes(x = chocolate, fill = fruity) + 
+  geom_bar(position = position_dodge())
 ```
 
 ### Challenge question: what proportion of candies have BOTH chocolate and caramel?
 
 ```{r}
-
+ggplot(candy_rankings) +
+  aes(x = chocolate, fill = caramel) +
+  geom_bar()
 ```
 
 ### Shapes
@@ -285,9 +294,9 @@ ggplot() +
 Similarly, you can **map** shape to a variable in the aes() function.
 
 ```{r}
-ggplot() +
-  aes() +
-  
+ggplot(candy_rankings) +
+  aes(x = pricepercent, y = winpercent, shape = chocolate) +
+  geom_point()
 ```
 
 ### Labels
@@ -295,24 +304,26 @@ ggplot() +
 Pretty self-explanatory here. labs() are added separately from the other plot parameters.
 
 ```{r}
-ggplot() +
-  aes(
-  labs(x = 
-       y =
-       title = ,
-       subtitle = 
-       caption =
+ggplot(candy_rankings) +
+  aes(x = sugarpercent, y = winpercent) +
+  geom_point() +
+  labs(x = "Sugar Percent",
+       y = "Win Percentage",
+       title = "Relationship between the dependent and independent variable",
+       subtitle = "for Halloween candies",
+       caption = "Based on an online survey by FiveThirtyEight")
 
 ```
 
 ### X and Y axis limits
 
 ```{r}
-ggplot() +
-  aes(x = , 
-      y = =) +
+ggplot(candy_rankings) +
+  aes(x = sugarpercent, 
+      y = winpercent) +
   geom_point() +
-
+  xlim(0,1.5) +
+  ylim(0,100)
 ```
 
 ## Plot Examples
