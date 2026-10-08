@@ -45,21 +45,30 @@ Make a histogram with all the data.
 
 ```{r}
 ggplot(SizeData_2022_2025) +
-  geom_histogram(mapping = aes(x = shell_length_mm), , binwidth = 1)
+  geom_histogram(mapping = aes(x = shell_length_mm), binwidth = 1)
 
+```
+
+```{r}
+ggplot(SizeData_2022_2025) +
+  geom_histogram(mapping = aes(x = shell_length_mm), binwidth = 1)
 ```
 
 Make a histogram with a `facet_wrap()` to separate the data from each site and year into separate graphs. What do you observe about the different histograms?
 
 ```{r}
 ggplot(SizeData_2022_2025) +
-
+  geom_histogram(mapping = aes(x = shell_length_mm), binwidth = 1) +
+  facet_wrap(site ~ year)
 ```
 
 We know our minimum size cut-off varied in different years of the surveys, and some teams just didn't follow directions. Filter out any observations smaller than 15 cm.
 
 ```{r}
 SizeData_2022_2025 <- SizeData_2022_2025 |> 
+  filter(shell_length_mm > 14)
+
+view(SizeData_2022_2025)
 ```
 
 ### 1.2 How long were the transects at each site?
@@ -67,10 +76,9 @@ SizeData_2022_2025 <- SizeData_2022_2025 |>
 Make a table using `select()` and `distinct()` to only show the length of each transect (each unique number) at each site. Sort by site and transect number.
 
 ```{r}
-TransectLengths <- SizeData_2022_2025 |> 
-  
-  
-  
+TransectLengths <- SizeData_2022_2025 |>
+  select(transect_length_m) +
+  distinct()
 
 TransectLengths
 ```
