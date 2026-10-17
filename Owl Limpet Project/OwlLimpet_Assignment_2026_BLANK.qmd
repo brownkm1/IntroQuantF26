@@ -166,14 +166,29 @@ Use nrow(), group_by() and count() to tally the limpet observations at each tran
 ```{r}
 No_CDM_Sizes
 
+# count() tallies the number of observations of each value/level in the designated column.
+
+# group_by() takes the specified variables and calculates separate summary values for the categories of that variable, which is hecking useful.
+
+# nrow() counts the number of rows in a data frame.
+
 # How many did we measure total, across both sites?
 No_CDM_Sizes |> 
+  nrow()
+# 1,767 limpets were measured across Heisler Park, Shaws Cove, and Treasure Cove.
 
 ## How many did we measure at each site? 
 No_CDM_Sizes |> 
+  group_by(site) |>
+  count()
+# 492 at Heisler Park, 806 at Shaws Cove, and 469 at Treasure Cove.
 
 # How many did we measure in each transect? 
 No_CDM_Sizes |> 
+  group_by(site, transect_num) |>
+  count()
+
+No_CDM_Sizes
 ```
 
 #### 2.2 What was the limpet density (i.e., limpets per square meter) for each transect?
@@ -181,23 +196,43 @@ No_CDM_Sizes |>
 Make a new dataframe out of the `No_CDM_Sizes` that has a column called *density,* that calculates the limpets per square meter for each transect. Remember that the transect included 1 meter on either side of the tape (total of 2 meters wide). Make sure to maintain the separation in year for the two Treasure Cove surveys using the `group_by()` function.
 
 ```{r}
-Limpet_Density <- No_CDM_Sizes |> 
-  
-  
+#The format for mutate is: mutate(data, newcolumn_name = computation)
+No_CDM_Sizes
 
+Limpet_Density <- No_CDM_Sizes |> 
+  group_by(site, year, transect_num, transect_length_m) |>
+  count() |>
+  mutate(density = n / (transect_length_m *2))
+  
 Limpet_Density
+
+# Visualizing my calculated density with some ggplots:
+Limpet_Density |> ggplot() +
+  aes(x = site, y = density) +
+  geom_boxplot() +
+  facet_wrap(site ~ year)
+
+Limpet_Density |> ggplot() +
+  geom_histogram(mapping = aes(x = density))
 ```
 
 Do you see any patterns just from examining this table of values?
 
-#### 2.2. Calculating mean and standard error of population density
+It was hard to determine patterns from just examining the table of values, so I made a couple of ggplots to visualize the data. The transects at Shaws Cove had the highest limpet density, and the mode for limpet density across the sites and years is around 2 limpets/sq meter.
+
+#### 2.3. Calculating mean and standard error of population density
 
 What was the mean limpets per square meter across all sites? And the standard deviation? And standard error?
 
 ```{r}
-Limpet_Density |> 
+Limpet_Density
 
+mean(Limpet_Density$density)
 
+sd(Limpet_Density$density)
+
+sd(Limpet_Density$density)/sqrt(41)
+# I couldn't figure out how to get R to include the correct "n" in the square root so I put the number of unique transects (41).
 ```
 
 Now create a summary table in which you calculate separate mean and standard deviation for each site and year (Shaws vs. Heisler vs. Treasure Cove)? What was the standard error? Round the mean and standard error to one decimal place. (look up the `round()` function!)
@@ -205,11 +240,14 @@ Now create a summary table in which you calculate separate mean and standard dev
 ```{r}
 # use summarize() to calculate the mean and standard error (sd/sqrt(n)) for the two locations
 LimpetPopSummary <- Limpet_Density |>
-  
-  
-  
-  
- 
+  group_by(site, year) |>
+  summarize(mean_density = mean(density, na.rm = TRUE),
+            sd_density = sd(density, na.rm = TRUE),
+            n = n(),
+            se_density = sd_density/sqrt(n)) |>
+  mutate_at(vars(mean_density, sd_density, se_density),
+            .funs = round, 2)
+
 # Display your summary nicely using kable(). 
 knitr::kable(LimpetPopSummary)
 ```
@@ -220,18 +258,21 @@ Boxplot, using the `Limpet_density` object, using fill for year. Label the Y-axi
 
 ```{r}
 Limpet_Density |> ggplot() + 
- 
-  
+  aes(x = site, y = density) +
+  geom_boxplot(aes(fill = year)) +
+  labs(y = "Limpets per square meter")
 ```
 
 A column plot with errorbars, and fill = year, using your new `LimpetPopSummary` object. Make sure to label the y-axis appropriately.
 
 ```{r}
-LimpetPopSummary |> ggplot()+
- 
-  
-  
+LimpetPopSummary
 
+LimpetPopSummary |> ggplot()+
+  aes(x = site, y = mean_density) +
+  geom_col(aes(fill = year)) +
+  geom_errorbar(aes(ymin = mean_density - se_density,
+                    ymax = mean_density + se_density))
 ```
 
 A `geom_point()` or `geom_jitter()`plot to visualize individual transect density observations
