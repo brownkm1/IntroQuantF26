@@ -77,8 +77,9 @@ Make a table using `select()` and `distinct()` to only show the length of each t
 
 ```{r}
 TransectLengths <- SizeData_2022_2025 |>
-  select(transect_length_m) +
-  distinct()
+  select(site, transect_num, transect_length_m) |>
+  distinct(SizeData_2022_2025[1], SizeData_2022_2025[2], SizeData_2022_2025[3]) |>
+  arrange(site, transect_num)
 
 TransectLengths
 ```
@@ -92,17 +93,21 @@ Visualize the transect lengths two different ways.
 - combine the two so that the points are red and overlay the boxplot graph.
 
 ```{r}
+# Create a boxplot of the TransectLengths data with site on the x-axis and transect length on the y-axis.
+TransectLengths |> ggplot() + 
+  aes(x = site, y = transect_length_m) +
+  geom_boxplot()
+
+# Create a scatter plot of the TransectLengths data with site on the x-axis and transect length on the y-axis.
 TransectLengths |> ggplot() +
+  aes(x = site, y = transect_length_m) +
+  geom_point()
 
-  
-
-TransectLengths |> ggplot() +
-
-
-TransectLengths |> ggplot() +
-
-  
-  
+# Same code as above but including both geom_boxplot and geom_point, with color sets to red for geom_point.
+TransectLengths |> ggplot() + 
+  aes(x = site, y = transect_length_m) +
+  geom_boxplot() +
+  geom_point(color = "red")
 ```
 
 THINKING QUESTIONS: Do we have the number of transects that we expect to in our data set? Are they all the same length? Do our numbers make sense?
@@ -114,25 +119,44 @@ ANSWER: Our methods have been a little inconsistent. We used different methods a
 Graph 1:
 
 ```{r}
+HabitatTypes_LimpetSize <- SizeData_2022_2025 |>
+  filter(habitat == "Open" | habitat == "Patch") |>
+  select(site, shell_length_mm, habitat)
 
+HabitatTypes_LimpetSize
+
+HabitatTypes_LimpetSize |> ggplot() +
+  aes(x = habitat, y = shell_length_mm) +
+  geom_boxplot()
 ```
 
-This shows:
+This shows: I filtered out the observations with "NA" for habitat so we might be able to see a difference in limpet size between the Open and Patch habitats. The limpets were larger in Open habitats, but there are many large outliers for the Patch habitats.
 
 Graph 2:
 
 ```{r}
+abitatTypes_LimpetSize <- SizeData_2022_2025 |>
+  filter(habitat == "Open" | habitat == "Patch") |>
+  select(site, shell_length_mm, habitat)
 
+HabitatTypes_LimpetSize
+
+HabitatTypes_LimpetSize |> ggplot() +
+  aes(x = site, y = shell_length_mm) +
+  geom_boxplot()
 ```
 
-This shows:
+This shows: I followed the same process as my first exploratory graph, but changed the x-axis to Site. This shows the difference in limpet sizes per site across all the years that this data was collected.
 
 ## Part 2: Population Density
 
 For the population density analysis, we will analyze data from Shaws Cove, Heisler Park, and Treasure Cove. Create a data frame that excludes the Corona del Mar data, as that site did not have area measured.
 
 ```{r}
-No_CDM_Sizes <- SizeData_2022_2025 |> 
+No_CDM_Sizes <- SizeData_2022_2025 |>
+  filter(site != "Corona del Mar")
+
+No_CDM_Sizes
 ```
 
 #### 2.1. How many limpets did we measure at each site in each year for sizes?
