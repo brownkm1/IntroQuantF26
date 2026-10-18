@@ -272,22 +272,32 @@ LimpetPopSummary |> ggplot()+
   aes(x = site, y = mean_density) +
   geom_col(aes(fill = year)) +
   geom_errorbar(aes(ymin = mean_density - se_density,
-                    ymax = mean_density + se_density))
+                    ymax = mean_density + se_density)) +
+  labs(y = "Limpets per square meter")
+
+# NEED HELP
 ```
 
 A `geom_point()` or `geom_jitter()`plot to visualize individual transect density observations
 
 ```{r}
-Limpet_Density |> ggplot() + 
-  
-  
-  
-  
+Limpet_Density
+
+Limpet_Density |> ggplot() +
+  aes(x = site, y = density, color = site) +
+  geom_jitter() +
+  labs(y = "Limpet density per transect")
+
+# NEED HELP
 ```
 
 Which plot do you find the most informative and useful and why?
 
+I find the boxplot to be most informative because it easily shows and compares the spread of my data at each site and year, including the mean, quartiles, and outliers.
+
 Based on these plots, does your data meet assumptions for a t-test?
+
+Yes - data are continuous, randomly sampled from a population, and the distribution looks like it is approximately normal based on the site-year histograms in 1.1. I'm not sure how to judge homogeneity of variance, but I'll assume that this dataset has it.
 
 T-Test assumptions (for a Student's T-test)
 
@@ -304,7 +314,17 @@ T-Test assumptions (for a Student's T-test)
 Is it roughly the same so that we can compare? Is it enough to run a statistical test?
 
 ```{r}
-Limpet_Density |> 
+# count() tallies the number of observations of each value/level in the designated column.
+
+# group_by() takes the specified variables and calculates separate summary values for the categories of that variable, which is hecking useful.
+
+# nrow() counts the number of rows in a data frame.
+
+Limpet_Density
+
+Limpet_Density |>
+  group_by(site, year) |>
+  count()
 ```
 
 #### 2.6. Does average number of owl limpets per square meter differ significantly between Heisler Park and Shaws Cove?
@@ -314,20 +334,28 @@ Filter the data to only include those sites before putting it into the `t.test()
 ```{r t-test}
 # run a t-test on your count data from each site (Limpet_Density)
 ShawsHeislerDensity <- Limpet_Density |> 
+  filter(site != "Treasure Cove")
 
+ShawsHeislerDensity
 
-t.test(     , data = ShawsHeislerDensity)
-
+t.test(density ~ site, data = ShawsHeislerDensity,
+       alternative = "two.sided")
 ```
 
 Explain the results of this t-test. Are you surprised by this result, given the figure you made above? Why do you think the results are what they are?
+
+The p-value of this t-test is 0.2574, which means there is a 25.74% chance that the actual means of the owl limpet populations at Heisler Park and Shaws Cove are different from each other. I think this because a lower p-value in a t-test is meant to reject the null hypothesis. The p-value from this test is not low enough to reject the null hypothesis.
 
 #### 2.7 Did Treasure Cove population density differ between the two sample years? Do a t-test and make a graph to complement presenting the result.
 
 ```{r}
 TC_density <- Limpet_Density |>
+  filter(site == "Treasure Cove")
 
-t.test(    )
+TC_density
+
+t.test(density ~ year, data = TC_density,
+       alternative = "two.sided")
 ```
 
 Since there was no difference in means, we'll ignore year at Treasure Cove from now on and just pool our data to make it easier for ourselves.
