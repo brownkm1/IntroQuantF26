@@ -57,7 +57,7 @@ Size_summary <- CCdata_tidy %>%
             n = n(), # count
             se_size = sd_size/sqrt(n)) %>% # standard error
   mutate_at(vars(mean_size, sd_size, se_size), # bonus line to reduce digits
-            .funs = round, 2) 
+            .funs = round, 2)
 
 Size_summary %>% 
   select(-Survey_Date) %>%

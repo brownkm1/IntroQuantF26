@@ -270,10 +270,13 @@ LimpetPopSummary
 
 LimpetPopSummary |> ggplot()+
   aes(x = site, y = mean_density) +
-  geom_col(aes(fill = year)) +
+  geom_col(aes(fill = year), position = position_dodge()) +
   geom_errorbar(aes(ymin = mean_density - se_density,
-                    ymax = mean_density + se_density)) +
+                    ymax = mean_density + se_density),
+                position = position_dodge(10),
+                width = 0.2) +
   labs(y = "Limpets per square meter")
+
 
 # NEED HELP
 ```
@@ -483,19 +486,22 @@ CDM_TC_Sizes |>
             n = n(),
             se_size = sd_size/sqrt(n)) |>
   ggplot() + aes(x = site, y = mean_size) +
-  geom_col(aes(fill = year)) +
+  geom_col(aes(fill = year), position = position_dodge()) +
   geom_errorbar(aes(ymin = mean_size - se_size,
-                    ymax = mean_size + se_size)) +
+                    ymax = mean_size + se_size),
+                position = position_dodge(10), 
+                width = 0.2) +
   labs(y = "Average limpet size (mm)")
 
-# NEED HELP ERROR BAR
+
+# HELP ERROR BAR
 ```
 
 #### [3.4 - Interpret and explain the results of your test]{.underline}
 
 Are we pretty confident that these samples were drawn from different populations? Why is the standard error so small?
 
-NEED HELP DON'T UNDERSTAND
+HELP/FINISH THIS
 
 I don't think we can say these samples were drawn from different populations (beyond knowing that the CDM site is separate from the TC site) because the average limpet size for each of them... \[something about the statistical tests and the means being close to each other\].
 
@@ -523,6 +529,9 @@ Clean up and combine the 2023, 2024 and 2025 data for Territories:
 load(file = "Data/All_Territories.Rdata")
 
 load(file = "Data/FenbergTerr.Rdata")
+
+view(All_Territories)
+view(FenbergTerr)
 ```
 
 #### 4.2 How many limpet territories did we measure?
@@ -530,6 +539,10 @@ load(file = "Data/FenbergTerr.Rdata")
 ```{r}
 ## How many territories were measured at each site in each year? 
 All_Territories |> 
+  group_by(site, year) |>
+  count()
+  
+  
 ```
 
 #### 4.3 Calculate meaningful variables from our measured values
@@ -541,10 +554,17 @@ Create new columns for:
 - Limpet body mass from shell length (equation below is from Fenberg et al. 2013).
 
 ```{r}
+# create a new column for territory area in mm^2 using the "numbsquares" column
+# mesh = 19 mm x 19 mm 
 All_Territories_area_mass <- All_Territories |> 
-  # create a new column for territory area in mm^2 using the "numbsquares" column
-         # mesh = 19 mm x 19 mm 
+  mutate(All_Territories, area_mm2 = numbsquares * 361) |>
+  mutate(All_Territories, mass_g = 0.00009*size_mm ^ 3.0471)
 
+All_Territories_area_mass
+
+
+#mutate(data, newcolumn_name = computation)
+#area_mm2
 
   # create a new column for limpet body mass
   # formula: mass_g = 0.00009*length ^ 3.0471
@@ -559,13 +579,18 @@ Explore the relationship between mass_g, and area_mm2 using scatter plots.
 # plot size_mm vs area_mm2 scatterplot with best fit regression line, no SE zone, not separated by site
 All_Territories_area_mass |> 
   ggplot() + 
-  
+  aes(x = size_mm, y = area_mm2) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
 ```
 
 ```{r}
 ## Scatter plot with site mapped to color
-All_Territories_area_mass |>
+All_Territories_area_mass |> 
   ggplot() + 
+  aes(x = size_mm, y = area_mm2, color = site) +
+  geom_point()
+#  geom_smooth(method = "lm", se = FALSE)
  
 ```
 
@@ -573,7 +598,10 @@ All_Territories_area_mass |>
 #  mass_g vs. area_mm2 scatterplot with best fit regression line, no SE zone, faceted by habitat
 All_Territories_area_mass |>
   ggplot() + 
-  
+  aes(x = mass_g, y = area_mm2) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~habitat)
 ```
 
 #### 4.5 What observations do you make about these plots? What do you find interesting about them? Explain one observation and make one more plot of your choosing to explore something you found interesting.
