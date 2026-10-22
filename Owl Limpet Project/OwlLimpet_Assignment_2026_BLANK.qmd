@@ -615,8 +615,18 @@ All_Territories_area_mass |>
 
 #### 4.5 What observations do you make about these plots? What do you find interesting about them? Explain one observation and make one more plot of your choosing to explore something you found interesting.
 
+Based on the first and third plots, there seems to be a positive relationship between limpet size and territory size. One thing I find interesting in the third plot is that the limpets observed in "patch" habitats seem more tightly clustered with smaller limpet and territory sizes.
+
 ```{r}
-# FIX
+# I want to see how limpet mass and territory area are related to each other at each of the 3 sites, and across years for Treasure Cove. The Shaws Cove limpets are both smaller and have smaller territories - could this result from human disturbance or something else?
+
+All_Territories_area_mass |>
+  ggplot() + 
+  aes(x = mass_g, y = area_mm2) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(site~year) +
+  labs (x = "Limpet mass (g)", y = "Territory area (mm^2)")
 ```
 
 #### 4.6. What important assumptions of tests of linear regression do these scatter plots fail? How can you tell?
@@ -693,7 +703,9 @@ summary(Fenberg_model)
 
 Explain your findings!
 
-FIX
+high-impact: CDM, Heisler Park
+
+low-impact: Treasure Cove, Shaws Cove
 
 ### Part 5: EXTRA CREDIT:
 
