@@ -8,6 +8,8 @@ editor: visual
 
 ```{r}
 install.packages("pwr")
+install.packages("patchwork")
+install.packages("janitor")
 
 library(pwr)
 library(tidyverse)
@@ -186,6 +188,7 @@ Could we really have measured only 25 limpets at each site and still detected an
 
 ```{r}
 # This code chooses 25 random observations from each site and creates a subsample data frame
+# this is called bootstrapping. Taking a part of your samples and seeing if the data matches.
 Subsample <- All_Size_Data |>
   group_by(site) |>
   sample_n(25)
@@ -219,6 +222,8 @@ temp <- tibble(diffs, pvals) |>
     pvals < 0.01 & pvals >= 0.001 ~ "**",
     pvals < 0.001 ~ "***"
   )) 
+
+temp
 
 temp |>
   group_by(sig) |>
@@ -346,7 +351,7 @@ What was the **power** of our full-scale owl limpet study for the difference bet
 
 ```{r}
 pwr.t.test(
-  n = nrow(All_Size_Data),
+  n = 187, # 187 is the lower sample size of the two sites
   d = 0.9599906,
   sig.level = 0.05,
   power = NULL,
@@ -391,6 +396,8 @@ test <- tibble(n_test, d_test, sig_level) |>
     sig.level = sig_level, 
     type = "two.sample")$power)
 
+test
+
 ggplot(test) +
   aes(x = sig_level, y = power, color = factor(n_test), group = factor(n_test)) + 
   geom_point() +
@@ -413,6 +420,8 @@ What was the minimum sample size needed to detect the difference between TC near
 t.test(shell_length_mm ~ location, data = TC_Data2023)
 d_tc <- abs(43.92547 - 42.29670)/sd(TC_Data2023$shell_length_mm)
 
+d_tc
+
 pwr.t.test(
   n = NULL,
   d = d_tc,
@@ -429,6 +438,8 @@ What was the minimum sample size needed to detect the difference between CDM nea
 ```{r}
 cdm_test <- t.test(shell_length_mm ~ location, data = CDM_Data2022)
 d_cdm <- abs(cdm_test$estimate[1] - cdm_test$estimate[2])/sd(CDM_Data2022$shell_length_mm)
+
+d_cdm
 
 pwr.t.test(
   n = NULL,

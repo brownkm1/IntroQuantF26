@@ -7,12 +7,12 @@ editor: visual
 ---
 
 ```{r}
-install.packages()
+install.packages("pwr")
 
 library(pwr)
 library(tidyverse)
 
-load(file = )
+load(file = "Demo Data Files/CleanOwlLimpet_Data2023.Rdata")
 ```
 
 ## 1. The Setting: Owl Limpet T-test
@@ -20,13 +20,13 @@ load(file = )
 So in our Owl Limpet Analysis assignment, we ran a t-test and found that there was a [highly]{.underline} significant difference (p \< 0.0000000000000001, *LOL*) in limpet shell size between Corona del Mar and Treasure Cove.
 
 ```{r}
-t.test()
+t.test(CDM_Data2022$shell_length_mm,TC_Data2023$shell_length_mm)
 ```
 
 ```{r}
-ggplot() + 
-  aes(x = , color = ) + 
-  
+ggplot(All_Size_Data) + 
+  aes(x = shell_length_mm, color = site) + 
+  geom_density()
 ```
 
 ## 2. Hypothesis Testing Review
@@ -73,6 +73,8 @@ The bold column headers represent the true, unknowable relationship; on the rows
 The formulas differ a little depending on the statistical test you're running and are not especially pretty, but you can use functions in R to calculate any of these metrics as long as you have the other three.
 
 The basic relationship is:
+
+#the thingie between power and () means "in proportion to"
 
 $$Power ∝ (ES × α × √n)/σ$$
 
