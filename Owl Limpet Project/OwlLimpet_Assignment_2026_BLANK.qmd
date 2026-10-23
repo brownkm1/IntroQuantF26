@@ -15,17 +15,23 @@ library(readxl)
 
 ## Project Summary:
 
-*Once you have completed this entire assignment, come back and write a project summary here that covers the aims, research questions, and basic methods of this study.*
+MCRS students observed the number, size, and territory size of owl limpets at four sites between 2022-2025: Corona del Mar (2022), Shaws Cove (2024), Heisler Park (2024), and Treasure Cove (2023 & 2025). Corona del Mar and Heisler Park are considered sites highly impacted by human activitiy, while Treasure Cove and Shaws Cove are considered low-impact.
 
-You have been given data from several locations and survey years:
+Our research questions are:
 
-- 2022: Corona del Mar (CDM) - size data only, taken haphazardly
+- What are the limpet population densities at each site and year, and do they differ from each other?
 
-- 2023: Treasure Cove (TC) - size data in 5-m transects, territories
+- How large are limpets on average at each site and year, and do they significantly differ from each other?
 
-- 2024: Heisler Park and Shaws Cove - size data in variable length transects, territories
+- What is the relationship between limpet size and territory size?
 
-- 2025: Treasure Cove (TC) - size data in 5-m transects, territories
+At the Corona del Mar site, only limpet counts and size data were recorded. Methods for the Treasure Cove, Heisler Park, and Shaws Cove sites were:
+
+- Counting the number of limpets within 1m of a straight transect tapes. Transects at Treasure Cove were 5m in length, while transect lengths at Heisler Park and Shaws Cove varied.
+
+- Measure the length of limpets within 1m of the transects.
+
+- Use a flexible, gridded net to count the number of squares that each territory covered.
 
 ```{r}
 load(file = "Data/SizeData_2022_2025.Rdata")
@@ -359,7 +365,7 @@ t.test(density ~ site, data = ShawsHeislerDensity,
 
 Explain the results of this t-test. Are you surprised by this result, given the figure you made above? Why do you think the results are what they are?
 
-The p-value of this t-test is 0.2574, which means there is a 25.74% chance that the actual means of the owl limpet populations at Heisler Park and Shaws Cove are different from each other. I think this because a lower p-value in a t-test is meant to reject the null hypothesis. The p-value from this test is not low enough to reject the null hypothesis.
+The p-value of this t-test is 0.2574, which means there is a 25.74% chance that the actual means of the owl limpet populations at Heisler Park and Shaws Cove are the same as each other. I was somewhat surprised by the results because the difference between 4 and 6 limpets per square meter at each site seems like a large difference to me. I think the t-test results ended up not being statistically significant because there's not enough evidence to reject the null hypothesis; natural variation or the sampling method could have contributed to the difference between the calculated means.
 
 #### 2.7 Did Treasure Cove population density differ between the two sample years? Do a t-test and make a graph to complement presenting the result.
 
@@ -511,7 +517,7 @@ CDM_TC_Sizes |>
 
 Are we pretty confident that these samples were drawn from different populations? Why is the standard error so small?
 
-We can be confident that these samples were drawn from different populations because the p-value from the t-test is extremely small. The standard error is so small because thundreds of samples (n) were taken, and n is included in the divisor when calculating standard error.
+We can be confident that these samples were drawn from different populations because the p-value from the t-test is extremely small, indicating that the size difference between the two sites was not by chance. The standard error is so small because hundreds of samples (n) were taken, and n is included in the divisor when calculating standard error.
 
 #### 3.5 - EXTRA CREDIT: repeat this analysis to see if the same result holds for the comparison at Heisler Park (high impact site) vs. Shaws Cove (low impact site).
 
@@ -703,9 +709,13 @@ summary(Fenberg_model)
 
 Explain your findings!
 
-high-impact: CDM, Heisler Park
+MCRS students observed the number, size, and territory size of owl limpets at four sites between 2022-2025: Corona del Mar (2022), Shaws Cove (2024), Heisler Park (2024), and Treasure Cove (2023 & 2025). Corona del Mar and Heisler Park are considered sites highly impacted by human activitiy, while Treasure Cove and Shaws Cove are considered low-impact.
 
-low-impact: Treasure Cove, Shaws Cove
+I found no significant difference between limpet density means for Shaws Cove (low-impact) and Heisler Park (high-impact) in 2024. Similarly, I found no significant difference in limpet density at the Treasure Cove site across 2023 and 2025.
+
+With regard to limpet size, I found a statistically significant difference between sizes at Corona del Mar and Treasure Cove. The Treasure Cove limpets are larger than Corona del Mar limpets. The smaller limpet size at Corona del Mar could be due to humans disproportionately trampling and killing larger limpets over time, while larger limpets have been able to survive longer at the low-impact Treasure Cove site.
+
+Across all 4 sites sampled, there was a positive relationship found between limpet mass and territory size - the larger the limpet, the larger its territory. The log relationship between mass and territory area can be characterized by the equation y = 0.8903x + 8.2116 (where x = log(mass) and y=log(area)). This equation is similar to that for limpet data collected at the protected Fenberg site (y = 0.89162x + 7.90973). Interestingly, limpets and their territory sizes were the smallest at Shaws Cove, a low-impact site. Perhaps human trampling is not the only or primary reason for the difference in limpet sizes across the four sites.
 
 ### Part 5: EXTRA CREDIT:
 
