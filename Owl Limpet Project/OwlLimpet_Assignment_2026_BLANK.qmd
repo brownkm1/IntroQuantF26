@@ -711,7 +711,7 @@ Explain your findings!
 
 MCRS students observed the number, size, and territory size of owl limpets at four sites between 2022-2025: Corona del Mar (2022), Shaws Cove (2024), Heisler Park (2024), and Treasure Cove (2023 & 2025). Corona del Mar and Heisler Park are considered sites highly impacted by human activitiy, while Treasure Cove and Shaws Cove are considered low-impact.
 
-I found no significant difference between limpet density means for Shaws Cove (low-impact) and Heisler Park (high-impact) in 2024. Similarly, I found no significant difference in limpet density at the Treasure Cove site across 2023 and 2025.
+I found no significant difference between limpet population density for Shaws Cove (low-impact) and Heisler Park (high-impact) in 2024. Similarly, I found no significant difference in limpet density at the Treasure Cove site across 2023 and 2025.
 
 With regard to limpet size, I found a statistically significant difference between sizes at Corona del Mar and Treasure Cove. The Treasure Cove limpets are larger than Corona del Mar limpets. The smaller limpet size at Corona del Mar could be due to humans disproportionately trampling and killing larger limpets over time, while larger limpets have been able to survive longer at the low-impact Treasure Cove site.
 
