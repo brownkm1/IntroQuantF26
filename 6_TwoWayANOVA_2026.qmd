@@ -270,9 +270,13 @@ Then you get the logic puzzle of figuring out the letters. Start left to right.
 
 ```{r}
 ggplot(pw_summary) + 
-  aes(x = factor(water, levels = c("lo", "mid", "hi")), y = mean, fill = plant) + 
+  aes(x = factor(water, levels = c("lo", "mid", "hi")),
+      y = mean,
+      fill = plant) + 
   geom_col(position = "dodge") + 
-  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), position = position_dodge(0.9), width = 0.2)+
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                position = position_dodge(0.9),
+                width = 0.2) +
   geom_text(
     label = c("A", "B", "C", "C", "CD", "D"), 
     position = position_dodge(0.9), 
