@@ -11,7 +11,7 @@ editor: visual
 For your final project analysis, you have been placed into groups, within which you can collaborate and help each other. Within your group, you will divide up the different data that is available to ask questions. You are required to address TWO questions each.
 
 1.  An ANOVA/GLM question that addresses the impact of the experimental treatments on a measured variable (SPAD, stomatal conductance, or height) in one of the two plant species.
-2.  A question of your choice that analyzes one of the abiotic variables (soil moisture, slope, aspect, etc.), past year data, or an interaction within the experiment.
+2.  A question of your choice that does a regression.
 
 The following worksheet will guide you through developing your research questions, hypotheses, and analysis approach.
 
