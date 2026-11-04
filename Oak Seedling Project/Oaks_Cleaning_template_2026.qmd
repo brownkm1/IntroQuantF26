@@ -141,6 +141,7 @@ You may be either examining `SPAD_Data_Raw`, `Height_Data_Raw`, `LICOR_Data_Raw`
 
 ```{r}
 # View data set
+view(Height_Data_Raw)
 ```
 
 In this next chunk, generate a cleaned data set following the example below. As you examine your raw data and find things to fix, add a #Note to create a list of things to fix up. You can then use pipes and write code to fix each thing in your checklist. This is also where if you identified `filters` or data computations in your Hypothesis worksheet (e.g., choose only one species), you can apply those.
@@ -153,24 +154,27 @@ Check out the illustrative animations on this page: <https://github.com/gadenbui
 
 ```{r}
 # Clean Height_Data_Raw
-# This filters out 151 empty rows and all observations for dead saplings. Also selects relevant columns and sorts the observations by tag number.
-# OS and OA are the same treatments. NEED TO CHANGE "OA" TO "OS"!
 
+# This filters out 151 empty rows and all observations for dead saplings.
 Height_Data <- Height_Data_Raw |>
   filter(Data_Entered_By == "KB" | 
            Data_Entered_By == "DG") |>
   filter(Dead_Alive != "Dead") |>
+  
+# Selects relevant columns and sorts the observations by tag number.
   select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Notes) |>
   arrange(Tag_Num)
 
-# Oh no! The OS treatment was written in some rows as "OS", and other rows as "OA". I looked up how to use the replace function to make all "OA" values into "OS", and this seems to have worked.
+
+# Oh no! The OS treatment was written in some rows as "OS", and other rows as "OA". I looked up how to use the replace function to make all "OA" values into "OS", and this seems to have worked:
 conditions <- c("OA")
 replacement_values <- c("OS")
 
 Height_Data$Treatment <- replace(Height_Data$Treatment, Height_Data$Treatment %in% conditions, replacement_values)
+# Phew! All "OA" values have been replaced with "OS".
 
 
-# View the tibble to make sure cleaning works
+# View the tibble to make sure cleaning works:
 Height_Data
 
 # Make a histogram graph to visualize the cleaned data
@@ -189,21 +193,26 @@ Repeat the steps you took for your ANOVA data for your second data set of choice
 
 ```{r}
 # View data set
+view(Moist_Data_Raw)
 ```
 
 ```{r}
 # Clean Moist_Data_Raw
-# This filters out 210 empty rows,  1 additional row with no soil moisture measurements, and 1 additional row with no second or third measurements. This also arranges the data by Block and Treatment, and changes the VWC and PER columns from character to numeric.
 
-# There are also 3 VWC and PER measurements per observation, so I will want to create 2 new columns to have an overall value of each per observation.
-
+# This filters out 210 empty rows,  1 additional row with no soil moisture measurements, and 1 additional row with no second or third measurements.
 Moisture_Data <- Moist_Data_Raw |>
   filter(Entered_By == "RK" | Entered_By == "NC") |>
   filter(VWC1_perc != "NA") |>
   filter(VWC2_perc != "NA") |>
+  
+# Select only relevant columns and arrange the data by block and treatment.
   select(Block, Treatment, VWC1_perc, PER1_ms, VWC2_perc, PER2_ms, VWC3_perc, PER3_ms) |>
   arrange(Block, Treatment) |>
+  
+# This changes the VWC and PER columns from character to numeric.
   mutate(VWC1_perc = as.numeric(VWC1_perc), PER1_ms = as.numeric(PER1_ms), VWC2_perc = as.numeric(VWC2_perc), PER2_ms = as.numeric(PER2_ms), VWC3_perc = as.numeric(VWC3_perc), PER3_ms = as.numeric(PER3_ms)) |>
+  
+# There are  3 VWC and PER measurements per observation, so I created 2 new columns to have an overall value of each per observation.
   mutate(VWC_perc = (VWC1_perc + VWC2_perc + VWC3_perc)/3, PER_ms = (PER1_ms + PER2_ms + PER3_ms)/3)
 
 
@@ -220,9 +229,7 @@ ggplot(Moisture_Data) +
   facet_wrap("Treatment")
 
 
-# Cool! Soil moisture was not measured per Tag Number, just for each treatment in each block (sometimes multiple times per treatment per block), so I will want to join this with the Height_Data by matching the Block and Treatment.
-
-## Perhaps I should pivot so that all VWC measurements are in 1 column, which will multiple the number of rows/observations by 3.
+# Idea: If I wanted to stick with soil moisture, perhaps I should pivot so that all VWC (1, 2, and 3) measurements are in 1 column, which will multiple the number of rows/observations by 3.
 ```
 
 ## Exploratory Data Analysis
@@ -242,6 +249,7 @@ Not sure where to start?
 Go for it!
 
 ```{r}
+# Boxplot of seedling height as a response to treatment.
 Height_Data |> ggplot() + 
   aes(x = Treatment, y = Seedling_Ht_cm) +
   geom_boxplot()
@@ -251,12 +259,29 @@ Height_Data |> ggplot() +
 # The variance between the Adult Canopy and Downed Tree treatments, as well as the distribution, looks similar. I wonder if the seedlings are too shaded to grow quickly. The open space has the tallest seedlings out of the manipulated treatments, with some higher outliers (but not as high as the Natural Recruits).
 
 # Perhaps it's worth doing a count of the dead replicates by treatment to see if there are specific treatments where seedlings germinate but then frequently die.
+
+
+# Boxplot of seedling height as a response to block
+Height_Data |> ggplot() + 
+  aes(x = Block, y = Seedling_Ht_cm) +
+  geom_boxplot()
+
+# Omg, the variance within block 003 is huge compared to the rest of the blocks! I would guess that the measurements are accurate though, because there are not actually any outliers within block 003. What about block 003 is making oak seedlings grow taller than in other blocks? Also, block 006 has 2 outliers - why?
 ```
 
 ```{r}
+Moisture_Data |> ggplot() + 
+  aes(x = Block, y = VWC_perc, color = Block) +
+  geom_jitter()
 
+# I can see a clear difference between soil moisture at blocks 001-004 (low) and blocks 005-008 (high). This is likely because blocks 001-004 were measured before a storm, and blocks 005-008 were measured after the storm. I'm not sure how helpful soil moisture will be in understanding seedling height because those two groups of blocks might not be comparable.
+
+
+Moisture_Data |> ggplot() + 
+  aes(x = Treatment, y = VWC_perc, color = Treatment) +
+  geom_jitter()
+
+# Similarly, I'd guess that the VWC measurements above 5% are from blocks 005-008 after the rain, while those below 5% are from blocks 001-004 below the rain. Maybe this is more helpful because replicates of the treatments were measured before and after rain, and this could give an idea of how much soil moisture each treatment retains after a storm. But I'm getting the feeling that I may not want to explore the relationship between soil moisture and seedling height anymore.
 ```
 
-```{r}
-
-```
+Notes: I don't think I want to continue analyzing soil moisture, while height is interesting to me! I ran out of time to clean LICOR and SPAD but I'm interested in choosing one of those for my regression analysis along with height. Joining the data will be easier because LICOR and SPAD both include tag numbers for replicates, while soil moisture does not.
