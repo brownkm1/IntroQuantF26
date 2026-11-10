@@ -6,7 +6,7 @@ editor: visual
 
 # Oaks Data Analysis
 
-INTRODUCTION
+**Name:** Kristen Brown
 
 ## Set Up The Data
 
@@ -261,6 +261,8 @@ My null and alternative hypotheses are:
 
 The two continuous variables are "Num_leaves" (predictor) and "Leaf_SPAD" (response).
 
+NOTE: I had originally done my regression hypothesis and exploratory data analysis for soil moisture. But through the EDA, I decided I did not actually want to work with soil moisture. This is my first stab at SPAD and number of leaves, and I think I want to try some different things on a second time around with this data.
+
 ### Assumption/Normality Test
 
 ```{r}
@@ -289,13 +291,27 @@ Because I think the data is normally distributed, I'll do a simple linear regres
 ```{r}
 SPAD_Data
 
+# Reminding myself what the cor.test is because I'm having trouble.
+?cor.test
+
+# I'm having trouble getting any results from this test, so I tried switching the x and y around.
+cor.test(Num_leaves, Leaf_SPAD, data = SPAD_Data, method = "spearman")
+
 cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")
 
-SPAD_CorSpear <- cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")
+# Unfortunately, R is telling me that whichever variable I put in the "X" location for this test is "not found" as an object. I need help fixing this.
+
+SPAD_CorSpear <- # Save whatever test ends up working eventually to this object.
+```
+
+Lastly, I will want to figure out the rho coefficient, p-value, slope, and intercept of the line. However, I'm not sure that this line of investigation has a strong enough relationship to warrant going beyond correlation to regression. I think a correlation might even be a stretch with what I have.
+
+```{r}
+
 ```
 
 ### Figure(s)
 
 ```{r}
-
+# Alas, I don't think I'm able to get this far with what I have. Back to square two.
 ```
