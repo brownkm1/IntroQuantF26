@@ -1,0 +1,301 @@
+---
+title: "Brown_OaksDataAnalysis"
+format: html
+editor: visual
+---
+
+# Oaks Data Analysis
+
+INTRODUCTION
+
+## Set Up The Data
+
+### Load packages
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+### Import all the data
+
+```{r}
+Height_Data_Raw <- 
+  read_excel("Oak Data Entry MCRS Field Trip.xlsx", 
+             sheet = "Seedling Heights")
+
+Moist_Data_Raw <- 
+  read_excel("Oak Data Entry MCRS Field Trip.xlsx", 
+             sheet = "Soil Moisture")
+
+SPAD_Data_Raw <- 
+  read_excel("Oak Data Entry MCRS Field Trip.xlsx", 
+             sheet = "SPAD", 
+             na = "NA")
+```
+
+## Summary Table & Data Cleaning:
+
+### Data Cleaning
+
+#### Clean Height Data
+
+```{r}
+# This filters out 151 empty rows and all observations for dead saplings.
+Height_Data <- Height_Data_Raw |>
+  filter(Data_Entered_By == "KB" | 
+           Data_Entered_By == "DG") |>
+  filter(Dead_Alive != "Dead") |>
+  
+  # Selects relevant columns and sorts the observations by tag number.
+  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Notes) |>
+  arrange(Tag_Num)
+
+# Oh no! The OS treatment was written in some rows as "OS", and other rows as "OA". I looked up how to use the replace function to make all "OA" values into "OS", and this seems to have worked:
+conditions <- c("OA")
+replacement_values <- c("OS")
+
+Height_Data$Treatment <- replace(Height_Data$Treatment, Height_Data$Treatment %in% conditions, replacement_values)
+# Phew! All "OA" values have been replaced with "OS".
+
+# View the tibble to make sure cleaning works:
+Height_Data
+
+# Use group_by to know sample size for each treatment, for fun.
+Height_Data |>
+  group_by(Treatment) |>
+  count()
+```
+
+#### Visualize Height Data
+
+```{r}
+# Boxplot of seedling height as a response to treatment.
+Height_Data |> ggplot() + 
+  aes(x = Treatment, y = Seedling_Ht_cm) +
+  geom_boxplot()
+
+# Make a histogram graph to visualize the cleaned data
+ggplot(Height_Data) +
+  geom_histogram(mapping = aes(x = Seedling_Ht_cm), binwidth = 2)
+
+# Histograms with facet wrap by treatment. This is where I first noticed that OA and OS were both used to describe OS (open space) treatment.
+ggplot(Height_Data) +
+  geom_histogram(mapping = aes(x = Seedling_Ht_cm), binwidth = 2) +
+  facet_wrap("Treatment")
+```
+
+#### Clean SPAD Data
+
+I looked at the data and chose to pare the SPAD readings down to the first three leaves measured, because some alive oak seedlings had only three readings. I hope to either mutate an average that accounts for Leaf4, Leaf5, and Leaf6 when observations have those values. OR to pivot the table longer so that each Leaf value is its own observation including Num_leaves for each. I'm choosing to do this quick average for the sake of time.
+
+```{r}
+view(SPAD_Data_Raw)
+```
+
+```{r}
+# This filters out 355 empty rows and all observations for dead saplings.
+SPAD_Data <- SPAD_Data_Raw |>
+  filter(Entered_By == "MF" | 
+           Entered_By == "AL") |>
+  filter(Dead_Alive != "Dead") |>
+  
+  # Selects relevant columns and sorts the observations by tag number.
+  select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves, Notes) |>
+  arrange(Tag_Num) |>
+  
+  # Create a new column with a SPAD reading that averages the readings for the first 3 leaves on each  
+  mutate(Leaf_SPAD = (Leaf1 + Leaf2 + Leaf3)/3)
+  
+
+# View the tibble to make sure cleaning works:
+SPAD_Data
+```
+
+#### Visualize SPAD Data
+
+Quick scatterplot to visualize SPAD leaf readings:
+
+```{r}
+ggplot(SPAD_Data) + 
+  aes(Num_leaves, Leaf_SPAD) +
+  geom_point()
+
+# Perhaps there is a relationship here, but it might be easier to see with a log transformation.
+
+ggplot(SPAD_Data) + 
+  aes(log(Num_leaves), Leaf_SPAD) +
+  geom_point()
+
+
+ggplot(SPAD_Data) + 
+  aes(Num_leaves, log(Leaf_SPAD)) +
+  geom_point()
+
+# Lol, maybe there is a relationship or SPAD numbers for coast live oak seedlings just oscillate around 32. There are a couple of low SPAD readings for those with few leaves.
+```
+
+## ANOVA
+
+My question is: **Does treatment affect oak seedling height?**
+
+My null and alternative hypotheses are:
+
+- **H(null):** Treatment does not significantly affect oak seedling height.
+
+- **H(alt):** At least one treatment does significantly affect oak seedling height.
+
+Variables include oak seedling height ("Seedling_Ht_cm" - continuous, response) and treatment ("Treatment" - categorical, predictor).
+
+### Assumption/Normality Tests
+
+```{r}
+view(Height_Data_Raw)
+
+Height_Data
+```
+
+### Statistical Tests
+
+First, I created a model and did a Shapiro-Wilkes Test to test for normality, as well as a Bartlett's Test to see if variance differs among treatments:
+
+```{r}
+# Create the linear model
+height_model <- lm(Seedling_Ht_cm ~ Treatment, data = Height_Data)
+
+# Q-Q Plot
+plot(height_model, which = 2)
+
+# This doesn't look quite right. The data is not normally distributed.
+
+# Shapiro-Wilkes Test to test whether the distribution of data is different from the normal distribution.
+shapiro.test(height_model$residuals)
+
+# The p-value is far smaller than 0.05, so the distribution of the data is not normal and requires a transformation or Kruskall-Wallis test.
+
+# Bartlett Test to see if variance differs among treatments.
+bartlett.test(Seedling_Ht_cm~Treatment, data = Height_Data)
+
+# The p-value is very small, so the variance differs significantly among treatments.
+```
+
+The seedling height data is not normally distributed. I tried a log transformation:
+
+```{r}
+# Transform the height data to achieve normality. First, create a new model with log height.
+
+logheight_model <- lm(log(Seedling_Ht_cm) ~ Treatment, data = Height_Data)
+
+# Boxplot of seedling height as a response to treatment.
+Height_Data |> ggplot() + 
+  aes(x = Treatment, y = log(Seedling_Ht_cm)) +
+  geom_boxplot()
+
+# Q-Q plot for logheight_model
+plot(logheight_model, which = 2)
+
+# This still doesn't look like it is normally distributed.
+
+
+# Shapiro-Wilkes Test to test whether the distribution of the logged data is different from the normal distribution.
+
+shapiro.test(logheight_model$residuals)
+#The p-value is not as small, but it's still smaller than 0.05. So, this data is definitely not normally distributed and I should try something different.
+```
+
+Even with a log transformation, the seedling height data is not normally distributed. So, I perform a Kruskal-Wallis Test for ANOVA with non-parametric data:
+
+```{r}
+# Kruskall-Wallis Test for seedling height ~ treatment.
+kruskal.test(Seedling_Ht_cm~Treatment, data = Height_Data)
+
+# The p-value is very small! The median of at least one treatment is statistically different than the medians of the other treatments. Awesome.
+
+# Print the results to an ANOVA table:
+anova(height_model)
+```
+
+There is a difference between at least one treatment, and we have an ANOVA table! Next I do a Tukey HSD test to see which treatments differ from each other:
+
+```{r}
+# Tukey Honest Significance Difference Test to see which pairs differ significantly from each other.
+
+TukeyHSD(aov(Seedling_Ht_cm ~ Treatment, data = Height_Data))
+```
+
+So the seedling heights between NR and AC are significantly different (p = 0.0000092), as well as NR and DT (p = 0.0000699). Interestingly, seedling heights between OS and NR are different too, but the p-value is slightly above 0.05
+
+So, in blocks 001-008, the oak seedlings in the Adult Canopy and Downed Tree treatments are shorter than the Natural Recruits. Now I wonder, why?
+
+### Figure(s)
+
+But first, figures. I'm struggling to understand which figure would be best to show non-parametric data (would it be helpful to focus on the mean heights of each treatment?), so I'm going to go with the annotated boxplot for now.
+
+```{r}
+# What I want to create is a boxplot of seedling height as a response to treatment, with added labels from the ANOVA and a new scale on the y-axis going to 120.
+
+Height_Data |> ggplot() + 
+  aes(x = factor(Treatment, levels = c("AC", "DT", "OS", "NR")), y = Seedling_Ht_cm) +
+  geom_boxplot() +
+  ylim(0, 120) +
+  geom_text(
+    label = c("A", "A", "AB", "B"),
+    position = position_dodge(0.9),
+    aes(y = 100, x = Treatment),
+    vjust = -0.5,
+    size = 3) +
+  ylim(0, 120)
+
+# I cannot figure figure this one out! :(
+```
+
+## Regression
+
+My question is: **Do oak seedlings with more leaves have higher SPAD values?**
+
+My null and alternative hypotheses are:
+
+- **H(null):** Oak seedlings with more leaves do not have higher SPAD values.
+
+- **H(alt):** Oak seedlings with more leaves do have higher SPAD values.
+
+The two continuous variables are "Num_leaves" (predictor) and "Leaf_SPAD" (response).
+
+### Assumption/Normality Test
+
+```{r}
+# Open the cleaned data for reference.
+SPAD_Data
+
+# Create histograms for each variable to assess normality.
+hist(SPAD_Data$Num_leaves)
+hist(SPAD_Data$Leaf_SPAD)
+```
+
+Num_leaves is skewed, while Leaf_SPAD looks like it could be normally distributed. Let's check out the homoscedasticity.
+
+```{r}
+SPAD.lm <- lm(Leaf_SPAD ~ Num_leaves, data = SPAD_Data)
+plot(SPAD.lm)
+plot(SPAD.lm, which = 1)
+
+# This looks like the variance is roughly equal across the data.
+```
+
+### Statistical Test
+
+Because I think the data is normally distributed, I'll do a simple linear regression (Pearson's product moment test).
+
+```{r}
+SPAD_Data
+
+cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")
+
+SPAD_CorSpear <- cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")
+```
+
+### Figure(s)
+
+```{r}
+
+```
