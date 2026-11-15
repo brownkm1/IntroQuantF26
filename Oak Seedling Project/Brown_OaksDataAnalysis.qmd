@@ -67,6 +67,31 @@ Height_Data |>
   count()
 ```
 
+Also for fun, I want to know how many seedlings survived and died in each treatment.
+
+```{r}
+# Create a new 
+Height_Data_Survival <- Height_Data_Raw |>
+  filter(Data_Entered_By == "KB" | 
+           Data_Entered_By == "DG") |>
+  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Dead_Alive, Notes)
+
+# Do the process to replace "OA" with "OS" again.
+conditions <- c("OA", "SA")
+replacement_values <- c("OS")
+
+Height_Data_Survival$Treatment <- replace(Height_Data_Survival$Treatment, Height_Data_Survival$Treatment %in% conditions, replacement_values)
+
+Height_Data_Survival
+
+# Use group_by to know survival counts of each treatment.
+Height_Data_Survival |>
+  group_by(Treatment, Dead_Alive) |>
+  count()
+```
+
+Despite having taller seedlings (see ANOVA section), the open space (also called "open area" or "salvia apiana") treatment also had the highest seedling death rate of the 4 treatments.
+
 #### Visualize Height Data
 
 ```{r}
