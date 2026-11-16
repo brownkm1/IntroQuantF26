@@ -36,9 +36,9 @@ SPAD_Data_Raw <-
 
 ## Summary Table & Data Cleaning:
 
-### Data Cleaning
+### Height Data
 
-#### Clean Height Data
+#### Data Cleaning
 
 ```{r}
 # This filters out 151 empty rows and all observations for dead saplings.
@@ -48,8 +48,8 @@ Height_Data <- Height_Data_Raw |>
   filter(Dead_Alive != "Dead") |>
   
   # Selects relevant columns and sorts the observations by tag number.
-  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Notes) |>
-  arrange(Tag_Num)
+  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, Notes) |>
+  arrange(Block, Treatment)
 
 # Oh no! The OS treatment was written in some rows as "OS", and other rows as "OA". I looked up how to use the replace function to make all "OA" values into "OS", and this seems to have worked:
 conditions <- c("OA")
@@ -67,32 +67,7 @@ Height_Data |>
   count()
 ```
 
-Also for fun, I want to know how many seedlings survived and died in each treatment.
-
-```{r}
-# Create a new 
-Height_Data_Survival <- Height_Data_Raw |>
-  filter(Data_Entered_By == "KB" | 
-           Data_Entered_By == "DG") |>
-  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Dead_Alive, Notes)
-
-# Do the process to replace "OA" with "OS" again.
-conditions <- c("OA", "SA")
-replacement_values <- c("OS")
-
-Height_Data_Survival$Treatment <- replace(Height_Data_Survival$Treatment, Height_Data_Survival$Treatment %in% conditions, replacement_values)
-
-Height_Data_Survival
-
-# Use group_by to know survival counts of each treatment.
-Height_Data_Survival |>
-  group_by(Treatment, Dead_Alive) |>
-  count()
-```
-
-Despite having taller seedlings (see ANOVA section), the open space (also called "open area" or "salvia apiana") treatment also had the highest seedling death rate of the 4 treatments.
-
-#### Visualize Height Data
+#### Data Visualization
 
 ```{r}
 # Boxplot of seedling height as a response to treatment.
@@ -110,7 +85,11 @@ ggplot(Height_Data) +
   facet_wrap("Treatment")
 ```
 
-#### Clean SPAD Data
+Clean Soil Moisture Data
+
+### SPAD Data
+
+#### Data Cleaning
 
 I looked at the data and chose to pare the SPAD readings down to the first three leaves measured, because some alive oak seedlings had only three readings. I hope to either mutate an average that accounts for Leaf4, Leaf5, and Leaf6 when observations have those values. OR to pivot the table longer so that each Leaf value is its own observation including Num_leaves for each. I'm choosing to do this quick average for the sake of time.
 
@@ -137,7 +116,7 @@ SPAD_Data <- SPAD_Data_Raw |>
 SPAD_Data
 ```
 
-#### Visualize SPAD Data
+#### Data Visualization
 
 Quick scatterplot to visualize SPAD leaf readings:
 
@@ -159,6 +138,105 @@ ggplot(SPAD_Data) +
 
 # Lol, maybe there is a relationship or SPAD numbers for coast live oak seedlings just oscillate around 32. There are a couple of low SPAD readings for those with few leaves.
 ```
+
+### Soil Moisture Data
+
+#### Data Cleaning
+
+```{r}
+# Clean Moist_Data_Raw
+
+# This filters out 210 empty rows,  1 additional row with no soil moisture measurements, and 1 additional row with no second or third measurements.
+Moisture_Data <- Moist_Data_Raw |>
+  filter(Entered_By == "RK" | Entered_By == "NC") |>
+  filter(VWC1_perc != "NA") |>
+  filter(VWC2_perc != "NA") |>
+  
+  # Select only relevant columns and arrange the data by block and treatment.
+  select(Block, Treatment, VWC1_perc, PER1_ms, VWC2_perc, PER2_ms, VWC3_perc, PER3_ms) |>
+  arrange(Block, Treatment) |>
+  
+  # This changes the VWC and PER columns from character to numeric.
+  mutate(VWC1_perc = as.numeric(VWC1_perc), PER1_ms = as.numeric(PER1_ms), VWC2_perc = as.numeric(VWC2_perc), PER2_ms = as.numeric(PER2_ms), VWC3_perc = as.numeric(VWC3_perc), PER3_ms = as.numeric(PER3_ms)) |>
+  
+  # There are  3 VWC and PER measurements per observation, so I created 2 new columns to have an overall value of each per observation.
+  mutate(VWC_perc = (VWC1_perc + VWC2_perc + VWC3_perc)/3, PER_ms = (PER1_ms + PER2_ms + PER3_ms)/3)
+
+
+# View the tibble to make sure cleaning works
+Moisture_Data
+```
+
+#### Data Visualization
+
+```{r}
+# View VWC_perc column in a histogram
+ggplot(Moisture_Data) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.5)
+
+# View VWC_perc column in a histogram
+ggplot(Moisture_Data) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.5) +
+  facet_wrap("Treatment")
+
+
+# Idea: If I wanted to stick with soil moisture, perhaps I should pivot so that all VWC (1, 2, and 3) measurements are in 1 column, which will multiple the number of rows/observations by 3.
+```
+
+#### Join with Seedling Height
+
+```{r}
+# I want to join Height_Data and Moisture_Data. First I'll view them to see how I can do the join.
+Moisture_Data
+Height_Data
+
+# In Moisture_Data, what I want is one row per Block + Treatment. For Block 002, there are 3 rows with separate measurements for the DT treatment. For Block 008, there are 2 rows with separate measurements for the AC treatment.
+
+# I'm not sure how to combine these data into one row, so I'm going to remove the additional data rows below the first one by filtering out their unique values.
+Moisture_Data_HeightJoin <- Moisture_Data |>
+  filter(VWC_perc != 0.00000000) |>
+  filter(VWC2_perc != 2.5) |>
+  filter(VWC1_perc != 4.2) |>
+  select(Block, Treatment, VWC_perc) |>
+  arrange(Block, Treatment)
+
+Moisture_Data_HeightJoin
+
+# Now, I want to join the VWC_perc value from Moisture_Data to each seedling in Height_Data based on the seedling's Block and Treatment. 
+Height_Moisture_Joined <- Height_Data |>
+  left_join(Moisture_Data_HeightJoin) |>
+  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWC_perc)
+
+# View the tibble for the new data frame.
+Height_Moisture_Joined
+```
+
+### Survival by Treatment
+
+Lastly, for fun, I want to know how many seedlings survived and died in each treatment using the Height Data.
+
+```{r}
+# Create a new data object.
+Height_Data_Survival <- Height_Data_Raw |>
+  filter(Data_Entered_By == "KB" | 
+           Data_Entered_By == "DG") |>
+  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Dead_Alive, Notes)
+
+# Do the process to replace "OA" with "OS" again.
+conditions <- c("OA")
+replacement_values <- c("OS")
+
+Height_Data_Survival$Treatment <- replace(Height_Data_Survival$Treatment, Height_Data_Survival$Treatment %in% conditions, replacement_values)
+
+Height_Data_Survival
+
+# Use group_by to know survival counts of each treatment.
+Height_Data_Survival |>
+  group_by(Treatment, Dead_Alive) |>
+  count()
+```
+
+Despite having taller seedlings (see ANOVA section), the open space (also called "open area") treatment also had the highest seedling death rate of the 4 treatments. The "SA" salvia apiana treatment is also included.
 
 ## ANOVA
 
