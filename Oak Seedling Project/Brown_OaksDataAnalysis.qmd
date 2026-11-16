@@ -105,11 +105,12 @@ SPAD_Data <- SPAD_Data_Raw |>
   filter(Dead_Alive != "Dead") |>
   
   # Selects relevant columns and sorts the observations by tag number.
-  select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves, Notes) |>
-  arrange(Tag_Num) |>
+  select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves) |>
+  arrange(Block, Treatment) |>
   
   # Create a new column with a SPAD reading that averages the readings for the first 3 leaves on each  
-  mutate(Leaf_SPAD = (Leaf1 + Leaf2 + Leaf3)/3)
+  mutate(Leaf_SPAD = (Leaf1 + Leaf2 + Leaf3)/3) |>
+  filter(Leaf_SPAD != "NA" & Num_leaves != "NA")
   
 
 # View the tibble to make sure cleaning works:
@@ -205,11 +206,59 @@ Moisture_Data_HeightJoin
 # Now, I want to join the VWC_perc value from Moisture_Data to each seedling in Height_Data based on the seedling's Block and Treatment. 
 Height_Moisture_Joined <- Height_Data |>
   left_join(Moisture_Data_HeightJoin) |>
-  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWC_perc)
+  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWC_perc) |>
+  filter(VWC_perc != "NA")
 
 # View the tibble for the new data frame.
 Height_Moisture_Joined
 ```
+
+##### Splitting the Blocks
+
+Now, I want to create separate data frames for before and after the storm.
+
+```{r}
+# Create a new data frame for Blocks 001-004, for which data were collected before the storm.
+Height_Moisture_BeforeStorm <- Height_Moisture_Joined |>
+  filter(Block == "001" | Block == "002" | Block == "003" | Block == "004")
+
+# Create a new data frame for Blocks 005-008, for which data were collected after the storm.
+Height_Moisture_AfterStorm <- Height_Moisture_Joined |>
+  filter(Block == "005" | Block == "006" | Block == "007" | Block == "008")
+
+# View tibbles to make sure the filter worked.
+Height_Moisture_BeforeStorm
+Height_Moisture_AfterStorm
+```
+
+##### Visualization of Height-Moisture
+
+```{r}
+# Create a basic scatter plot for seedling height and block/treatment VWC, for Blocks 001-004 and Blocks 005-008.
+Height_Moisture_BeforeStorm |>
+  ggplot() +
+  aes(x = Seedling_Ht_cm, y = VWC_perc) +
+  geom_point()
+
+Height_Moisture_AfterStorm |>
+  ggplot() +
+  aes(x = Seedling_Ht_cm, y = VWC_perc) +
+  geom_point()
+
+
+# Same thing but with the axes flipped, for science.
+Height_Moisture_BeforeStorm |>
+  ggplot() +
+  aes(x = VWC_perc, y = Seedling_Ht_cm) +
+  geom_point()
+
+Height_Moisture_AfterStorm |>
+  ggplot() +
+  aes(x = VWC_perc, y = Seedling_Ht_cm) +
+  geom_point()
+```
+
+Honestly, it's hard to tell from the scatter plots alone if there's any relationship between seedling height and soil moisture. The second set with soil moisture on the X and seedling height on the Y looks a bit more promising.
 
 ### Survival by Treatment
 
@@ -326,7 +375,7 @@ There is a difference between at least one treatment, and we have an ANOVA table
 TukeyHSD(aov(Seedling_Ht_cm ~ Treatment, data = Height_Data))
 ```
 
-So the seedling heights between NR and AC are significantly different (p = 0.0000092), as well as NR and DT (p = 0.0000699). Interestingly, seedling heights between OS and NR are different too, but the p-value is slightly above 0.05
+So the seedling heights between NR and AC are significantly different (p = 0.0000092), as well as NR and DT (p = 0.0000699). Interestingly, seedling heights between OS and NR are different too, but the p-value is slightly above 0.05.
 
 So, in blocks 001-008, the oak seedlings in the Adult Canopy and Downed Tree treatments are shorter than the Natural Recruits. Now I wonder, why?
 
@@ -352,7 +401,7 @@ Height_Data |> ggplot() +
 # I cannot figure figure this one out! :(
 ```
 
-## Regression
+## Regression (SPAD-Num_leaves)
 
 My question is: **Do oak seedlings with more leaves have higher SPAD values?**
 
@@ -387,7 +436,7 @@ plot(SPAD.lm, which = 1)
 # This looks like the variance is roughly equal across the data.
 ```
 
-### Statistical Test
+### Statistical Tests
 
 Because I think the data is normally distributed, I'll do a simple linear regression (Pearson's product moment test).
 
@@ -417,4 +466,61 @@ Lastly, I will want to figure out the rho coefficient, p-value, slope, and inter
 
 ```{r}
 # Alas, I don't think I'm able to get this far with what I have. Back to square two.
+```
+
+## Regression (Soil Moisture-Seedling Height)
+
+Okay, I decided to try this after all and to facet the regression tests and figures by date that the data was collected - before (Blocks 001-004) or after (Blocks 005-008) the storm.
+
+My question is: **Are oak seedlings taller in treatments with higher soil moisture?**
+
+My null and alternative hypotheses are:
+
+- **H(null):** There is not a linear relationship between soil moisture and seedling height.u
+
+- **H(alt):** There is a linear relationship between soil moisture and seedling height.
+
+The two continuous variables are "Seedling_Ht_cm" (predictor) and "VWC_perc" (response).
+
+### Assumption/Normality Test
+
+```{r}
+# Open the cleaned data frame for reference.
+Height_Moisture_BeforeStorm
+
+# Create histograms for each variable to assess normality.
+hist(Height_Moisture_BeforeStorm$Seedling_Ht_cm)
+hist(Height_Moisture_BeforeStorm$VWC_perc)
+
+# Repeat the process for the After Storm data.
+Height_Moisture_AfterStorm
+
+hist(Height_Moisture_AfterStorm$Seedling_Ht_cm)
+hist(Height_Moisture_AfterStorm$VWC_perc)
+```
+
+```{r}
+VWC.lm_BeforeStorm <- lm(VWC_perc ~ Seedling_Ht_cm, data = Height_Moisture_BeforeStorm)
+plot(VWC.lm)
+plot(VWC.lm, which = 1)
+```
+
+```{r}
+VWC.lm_AfterStorm <- lm(VWC_perc ~ Seedling_Ht_cm, data = Height_Moisture_AfterStorm)
+plot(VWC.lm)
+plot(VWC.lm, which = 1)
+```
+
+These plots kind of look exactly the same... I think I did something wrong.
+
+### Statistical Tests
+
+```{r}
+# I'm getting the same error as above with cor.test.
+```
+
+### Figure(s)
+
+```{r}
+
 ```
