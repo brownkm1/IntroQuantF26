@@ -85,8 +85,6 @@ ggplot(Height_Data) +
   facet_wrap("Treatment")
 ```
 
-Clean Soil Moisture Data
-
 ### SPAD Data
 
 #### Data Cleaning
@@ -173,11 +171,11 @@ Moisture_Data
 ```{r}
 # View VWC_perc column in a histogram
 ggplot(Moisture_Data) +
-  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.5)
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2)
 
 # View VWC_perc column in a histogram
 ggplot(Moisture_Data) +
-  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.5) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2) +
   facet_wrap("Treatment")
 
 
@@ -201,6 +199,7 @@ Moisture_Data_HeightJoin <- Moisture_Data |>
   select(Block, Treatment, VWC_perc) |>
   arrange(Block, Treatment)
 
+# Okay, here is my key for the join:
 Moisture_Data_HeightJoin
 
 # Now, I want to join the VWC_perc value from Moisture_Data to each seedling in Height_Data based on the seedling's Block and Treatment. 
@@ -287,7 +286,7 @@ Height_Data_Survival |>
 
 Despite having taller seedlings (see ANOVA section), the open space (also called "open area") treatment also had the highest seedling death rate of the 4 treatments. The "SA" salvia apiana treatment is also included.
 
-## ANOVA
+## ANOVA (Height-Treatment)
 
 My question is: **Does treatment affect oak seedling height?**
 
@@ -399,6 +398,26 @@ Height_Data |> ggplot() +
   ylim(0, 120)
 
 # I cannot figure figure this one out! :(
+```
+
+## ANOVA (Soil Moisture-Treatment)
+
+### Assumption/Normality Tests
+
+```{r}
+
+```
+
+### Statistical Tests
+
+```{r}
+
+```
+
+### Figure(s)
+
+```{r}
+
 ```
 
 ## Regression (SPAD-Num_leaves)
@@ -517,6 +536,26 @@ These plots kind of look exactly the same... I think I did something wrong.
 
 ```{r}
 # I'm getting the same error as above with cor.test.
+```
+
+### Figure(s)
+
+```{r}
+
+```
+
+## Regression (Height-Num Leaves)
+
+### Assumption/Normality Tests
+
+```{r}
+
+```
+
+### Statistical Tests
+
+```{r}
+
 ```
 
 ### Figure(s)
