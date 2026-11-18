@@ -41,11 +41,12 @@ SPAD_Data_Raw <-
 #### Data Cleaning
 
 ```{r}
-# This filters out 151 empty rows and all observations for dead saplings.
+# This filters out 151 empty rows, all observations for dead seedlings, and all observations for NR seedlings.
 Height_Data <- Height_Data_Raw |>
   filter(Data_Entered_By == "KB" | 
            Data_Entered_By == "DG") |>
   filter(Dead_Alive != "Dead") |>
+  filter(Treatment != "NR") |>
   
   # Selects relevant columns and sorts the observations by tag number.
   select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, Notes) |>
@@ -85,58 +86,304 @@ ggplot(Height_Data) +
   facet_wrap("Treatment")
 ```
 
-### SPAD Data
+### Soil Moisture Data
 
 #### Data Cleaning
 
-I looked at the data and chose to pare the SPAD readings down to the first three leaves measured, because some alive oak seedlings had only three readings. I hope to either mutate an average that accounts for Leaf4, Leaf5, and Leaf6 when observations have those values. OR to pivot the table longer so that each Leaf value is its own observation including Num_leaves for each. I'm choosing to do this quick average for the sake of time.
-
 ```{r}
-view(SPAD_Data_Raw)
+# This filters out 210 empty rows 1 additional row with no soil moisture measurements.
+Moisture_Data_Longer <- Moist_Data_Raw |>
+  filter(Entered_By == "RK" | Entered_By == "NC") |>
+  filter(VWC1_perc != "NA") |>
+  
+  # This selects the only columns I need and changes the VWC values from character to numeric.
+  select(Block, Treatment, VWC1_perc, VWC2_perc, VWC3_perc) |>
+  arrange(Block, Treatment) |>
+  mutate(VWC1_perc = as.numeric(VWC1_perc), VWC2_perc = as.numeric(VWC2_perc), VWC3_perc = as.numeric(VWC3_perc)) |>
+  
+  # I am pivoting the table longer so that multiple VWC measurements per row do not exist. Every VWC measurement should have its own row.
+  pivot_longer(
+    cols = starts_with("VWC"),
+    values_to = "VWC_perc"
+  )  |>
+  select(Block, Treatment, VWC_perc) |>
+  filter(VWC_perc != "NA")
+
+# View tibble. YESSSS it worked!
+Moisture_Data_Longer
 ```
 
 ```{r}
-# This filters out 355 empty rows and all observations for dead saplings.
-SPAD_Data <- SPAD_Data_Raw |>
-  filter(Entered_By == "MF" | 
-           Entered_By == "AL") |>
-  filter(Dead_Alive != "Dead") |>
-  
-  # Selects relevant columns and sorts the observations by tag number.
-  select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves) |>
-  arrange(Block, Treatment) |>
-  
-  # Create a new column with a SPAD reading that averages the readings for the first 3 leaves on each  
-  mutate(Leaf_SPAD = (Leaf1 + Leaf2 + Leaf3)/3) |>
-  filter(Leaf_SPAD != "NA" & Num_leaves != "NA")
-  
+# Create a summary table of average VWC_perc for block-treatment, which will be used to join with Height_Data.
+Average_VWC_BlockTreatment <- Moisture_Data_Longer |>
+  group_by(Block, Treatment) |>
+  summarize(VWCmean_perc = mean(VWC_perc, na.rm = TRUE))
 
-# View the tibble to make sure cleaning works:
-SPAD_Data
+# View tibble
+Average_VWC_BlockTreatment
 ```
 
 #### Data Visualization
 
-Quick scatterplot to visualize SPAD leaf readings:
+```{r}
+# View VWC_perc column in a histogram
+ggplot(Moisture_Data_Longer) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2)
+
+# View VWC_perc column in a histogram
+ggplot(Moisture_Data_Longer) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2) +
+  facet_wrap("Treatment")
+```
+
+#### Join with Height
 
 ```{r}
-ggplot(SPAD_Data) + 
-  aes(Num_leaves, Leaf_SPAD) +
-  geom_point()
+# I want to join Height_Data and the Average_VWC_BlockTreatment moisture data. First I'll view them to see how I can do the join.
+Height_Data
+Average_VWC_BlockTreatment
 
-# Perhaps there is a relationship here, but it might be easier to see with a log transformation.
+# Now, I want to join the VWC_perc value from Moisture_Data to each seedling in Height_Data based on the seedling's Block and Treatment. 
+Height_Moisture_Joined <- Height_Data |>
+  left_join(Average_VWC_BlockTreatment) |>
+  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWCmean_perc)
 
-ggplot(SPAD_Data) + 
-  aes(log(Num_leaves), Leaf_SPAD) +
-  geom_point()
-
-
-ggplot(SPAD_Data) + 
-  aes(Num_leaves, log(Leaf_SPAD)) +
-  geom_point()
-
-# Lol, maybe there is a relationship or SPAD numbers for coast live oak seedlings just oscillate around 32. There are a couple of low SPAD readings for those with few leaves.
+# View the tibble for the new data frame.
+Height_Moisture_Joined
 ```
+
+##### Splitting the Blocks
+
+Now, I want to create separate data frames for before and after the storm.
+
+```{r}
+# Create a new data frame for Blocks 001-004, for which data were collected before the storm.
+Height_Moisture_BeforeStorm <- Height_Moisture_Joined |>
+  filter(Block == "001" | Block == "002" | Block == "003" | Block == "004")
+
+# Create a new data frame for Blocks 005-008, for which data were collected after the storm.
+Height_Moisture_AfterStorm <- Height_Moisture_Joined |>
+  filter(Block == "005" | Block == "006" | Block == "007" | Block == "008") |>
+  filter(VWCmean_perc != "NA")
+
+# View tibbles to make sure the filter worked.
+Height_Moisture_BeforeStorm
+Height_Moisture_AfterStorm
+```
+
+##### Visualization of Height-Moisture
+
+```{r}
+# Create a basic scatter plot for seedling height and block/treatment VWC, for Blocks 001-004 and Blocks 005-008.
+Height_Moisture_BeforeStorm |>
+  ggplot() +
+  aes(x = Seedling_Ht_cm, y = VWCmean_perc) +
+  geom_point()
+
+Height_Moisture_AfterStorm |>
+  ggplot() +
+  aes(x = Seedling_Ht_cm, y = VWCmean_perc) +
+  geom_point()
+
+
+# Same thing but with the axes flipped, for science.
+Height_Moisture_BeforeStorm |>
+  ggplot() +
+  aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
+  geom_point()
+
+Height_Moisture_AfterStorm |>
+  ggplot() +
+  aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
+  geom_point()
+```
+
+Honestly, it's hard to tell from the scatter plots alone if there's any relationship between seedling height and soil moisture. The second set with soil moisture on the X and seedling height on the Y looks a bit more promising. I think there will be a relationship for soil moisture and seedling height for blocks 005-008, which were measured after the storm.
+
+### Survival by Treatment
+
+Lastly, for fun, I want to know how many seedlings survived and died in each treatment using the Height Data.
+
+```{r}
+# Create a new data object.
+Height_Data_Survival <- Height_Data_Raw |>
+  filter(Data_Entered_By == "KB" | 
+           Data_Entered_By == "DG") |>
+  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Dead_Alive, Notes)
+
+# Do the process to replace "OA" with "OS" again.
+conditions <- c("OA")
+replacement_values <- c("OS")
+
+Height_Data_Survival$Treatment <- replace(Height_Data_Survival$Treatment, Height_Data_Survival$Treatment %in% conditions, replacement_values)
+
+Height_Data_Survival
+
+# Use group_by to know survival counts of each treatment.
+Height_Data_Survival |>
+  group_by(Treatment, Dead_Alive) |>
+  count()
+```
+
+Despite having taller seedlings (see ANOVA section), the open space (also called "open area") treatment also had the highest seedling death rate of the 3 manipulated treatments. The "SA" salvia apiana treatment is also included.
+
+## ANOVA (Height-Treatment)
+
+My question is: **Does treatment affect oak seedling height?**
+
+My null and alternative hypotheses are:
+
+- **H(null):** Treatment does not significantly affect oak seedling height.
+
+- **H(alt):** At least one treatment does significantly affect oak seedling height.
+
+Variables include oak seedling height ("Seedling_Ht_cm" - continuous, response) and treatment ("Treatment" - categorical, predictor).
+
+### Assumption/Normality Tests
+
+```{r}
+# View the height data table and a boxplot and histogram of the data.
+Height_Data
+
+Height_Data |> ggplot() + 
+  aes(x = Treatment, y = Seedling_Ht_cm) +
+  geom_boxplot()
+
+ggplot(Height_Data) +
+  geom_histogram(mapping = aes(x = Seedling_Ht_cm), binwidth = 2)
+```
+
+These seem normally distributed.
+
+### Statistical Tests
+
+First, I created a model and made a Q-Q plot, which looks fairly normally distributed.
+
+```{r}
+# Create the linear model
+height_model <- lm(Seedling_Ht_cm ~ Treatment, data = Height_Data)
+
+# Q-Q Plot
+plot(height_model, which = 2)
+```
+
+The seedling height data looks normally distributed, so let's do the ANOVA:
+
+```{r}
+# Print the results to an ANOVA table:
+anova(height_model)
+```
+
+There is a difference between at least one treatment, and I have an ANOVA table! Next I do a Tukey HSD test to see which treatments differ from each other:
+
+```{r}
+# Tukey Honest Significance Difference Test to see which pairs differ significantly from each other.
+
+TukeyHSD(aov(Seedling_Ht_cm ~ Treatment, data = Height_Data))
+```
+
+So the seedling heights between OS and AC are different (p = 0.0073657), as well as OS and DT (p = 0.0338525).
+
+### Figure(s)
+
+I want to show an annotated boxplot
+
+```{r}
+# What I want to create is a boxplot of seedling height as a response to treatment, with added labels from the ANOVA and a new scale on the y-axis going to 120.
+
+Height_Data |> ggplot() + 
+  aes(x = Treatment, y = Seedling_Ht_cm) +
+  geom_boxplot() +
+  geom_text(
+    label = c("A", "A", "B"),
+    position = position_dodge(0.9),
+    aes(y = 100, x = 1),
+    vjust = -0.5,
+    size = 3) +
+  ylim(0, 120)
+
+# I cannot figure figure this one out! :(
+```
+
+## Regression (Soil Moisture-Seedling Height)
+
+Okay, I decided to try this after all and to facet the regression tests and figures by date that the data was collected - before (Blocks 001-004) or after (Blocks 005-008) the storm.
+
+My question is: **Are oak seedlings taller in treatments with higher soil moisture?**
+
+My null and alternative hypotheses are:
+
+- **H(null):** There is not a linear relationship between soil moisture and seedling height.u
+
+- **H(alt):** There is a linear relationship between soil moisture and seedling height.
+
+The two continuous variables are "Seedling_Ht_cm" (predictor) and "VWCmean_perc" (response).
+
+### Assumption/Normality Test
+
+```{r}
+# Open the cleaned data frame for reference.
+Height_Moisture_BeforeStorm
+
+# Create histograms for each variable to assess normality.
+hist(Height_Moisture_BeforeStorm$Seedling_Ht_cm)
+hist(Height_Moisture_BeforeStorm$VWCmean_perc)
+
+# Repeat the process for the After Storm data.
+Height_Moisture_AfterStorm
+
+hist(Height_Moisture_AfterStorm$Seedling_Ht_cm)
+hist(Height_Moisture_AfterStorm$VWCmean_perc)
+```
+
+```{r}
+# For blocks 001-004 before the storm.
+VWC.lm_BeforeStorm <- lm(VWCmean_perc ~ Seedling_Ht_cm, data = Height_Moisture_BeforeStorm)
+plot(VWC.lm_BeforeStorm)
+plot(VWC.lm_BeforeStorm, which = 1)
+```
+
+```{r}
+# For blocks 005-008 after the storm.
+VWC.lm_AfterStorm <- lm(VWCmean_perc ~ Seedling_Ht_cm, data = Height_Moisture_AfterStorm)
+plot(VWC.lm_AfterStorm)
+plot(VWC.lm_AfterStorm, which = 1)
+```
+
+### Statistical Tests
+
+```{r}
+cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_BeforeStorm, method = "pearson")
+```
+
+```{r}
+cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_AfterStorm, method = "pearson")
+```
+
+### Figure(s)
+
+```{r}
+
+```
+
+## ANOVA (Soil Moisture-Treatment)
+
+### Assumption/Normality Tests
+
+```{r}
+```
+
+### Statistical Tests
+
+```{r}
+```
+
+### Figure(s)
+
+```{r}
+```
+
+# NOT USING ANYMORE
 
 ### Soil Moisture Data
 
@@ -166,261 +413,60 @@ Moisture_Data <- Moist_Data_Raw |>
 Moisture_Data
 ```
 
+### SPAD Data (no longer using)
+
+#### Data Cleaning
+
+I looked at the data and chose to pare the SPAD readings down to the first three leaves measured, because some alive oak seedlings had only three readings. I hope to either mutate an average that accounts for Leaf4, Leaf5, and Leaf6 when observations have those values. OR to pivot the table longer so that each Leaf value is its own observation including Num_leaves for each. I'm choosing to do this quick average for the sake of time.
+
+```{r}
+view(SPAD_Data_Raw)
+```
+
+```{r}
+# This filters out 355 empty rows and all observations for dead saplings.
+SPAD_Data <- SPAD_Data_Raw |>
+  filter(Entered_By == "MF" | 
+           Entered_By == "AL") |>
+  filter(Dead_Alive != "Dead") |>
+  
+  # Selects relevant columns and sorts the observations by tag number.
+  select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves) |>
+  arrange(Block, Treatment) |>
+  
+  # Create a new column with a SPAD reading that averages the readings for the first 3 leaves on each  
+  mutate(Leaf_SPAD = (Leaf1 + Leaf2 + Leaf3)/3) |>
+  filter(Leaf_SPAD != "NA" & Num_leaves != "NA")
+
+
+# View the tibble to make sure cleaning works:
+SPAD_Data
+```
+
 #### Data Visualization
 
-```{r}
-# View VWC_perc column in a histogram
-ggplot(Moisture_Data) +
-  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2)
-
-# View VWC_perc column in a histogram
-ggplot(Moisture_Data) +
-  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2) +
-  facet_wrap("Treatment")
-
-
-# Idea: If I wanted to stick with soil moisture, perhaps I should pivot so that all VWC (1, 2, and 3) measurements are in 1 column, which will multiple the number of rows/observations by 3.
-```
-
-#### Join with Seedling Height
+Quick scatterplot to visualize SPAD leaf readings:
 
 ```{r}
-# I want to join Height_Data and Moisture_Data. First I'll view them to see how I can do the join.
-Moisture_Data
-Height_Data
-
-# In Moisture_Data, what I want is one row per Block + Treatment. For Block 002, there are 3 rows with separate measurements for the DT treatment. For Block 008, there are 2 rows with separate measurements for the AC treatment.
-
-# I'm not sure how to combine these data into one row, so I'm going to remove the additional data rows below the first one by filtering out their unique values.
-Moisture_Data_HeightJoin <- Moisture_Data |>
-  filter(VWC_perc != 0.00000000) |>
-  filter(VWC2_perc != 2.5) |>
-  filter(VWC1_perc != 4.2) |>
-  select(Block, Treatment, VWC_perc) |>
-  arrange(Block, Treatment)
-
-# Okay, here is my key for the join:
-Moisture_Data_HeightJoin
-
-# Now, I want to join the VWC_perc value from Moisture_Data to each seedling in Height_Data based on the seedling's Block and Treatment. 
-Height_Moisture_Joined <- Height_Data |>
-  left_join(Moisture_Data_HeightJoin) |>
-  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWC_perc) |>
-  filter(VWC_perc != "NA")
-
-# View the tibble for the new data frame.
-Height_Moisture_Joined
-```
-
-##### Splitting the Blocks
-
-Now, I want to create separate data frames for before and after the storm.
-
-```{r}
-# Create a new data frame for Blocks 001-004, for which data were collected before the storm.
-Height_Moisture_BeforeStorm <- Height_Moisture_Joined |>
-  filter(Block == "001" | Block == "002" | Block == "003" | Block == "004")
-
-# Create a new data frame for Blocks 005-008, for which data were collected after the storm.
-Height_Moisture_AfterStorm <- Height_Moisture_Joined |>
-  filter(Block == "005" | Block == "006" | Block == "007" | Block == "008")
-
-# View tibbles to make sure the filter worked.
-Height_Moisture_BeforeStorm
-Height_Moisture_AfterStorm
-```
-
-##### Visualization of Height-Moisture
-
-```{r}
-# Create a basic scatter plot for seedling height and block/treatment VWC, for Blocks 001-004 and Blocks 005-008.
-Height_Moisture_BeforeStorm |>
-  ggplot() +
-  aes(x = Seedling_Ht_cm, y = VWC_perc) +
+ggplot(SPAD_Data) + 
+  aes(Num_leaves, Leaf_SPAD) +
   geom_point()
 
-Height_Moisture_AfterStorm |>
-  ggplot() +
-  aes(x = Seedling_Ht_cm, y = VWC_perc) +
+# Perhaps there is a relationship here, but it might be easier to see with a log transformation.
+
+ggplot(SPAD_Data) + 
+  aes(log(Num_leaves), Leaf_SPAD) +
   geom_point()
 
 
-# Same thing but with the axes flipped, for science.
-Height_Moisture_BeforeStorm |>
-  ggplot() +
-  aes(x = VWC_perc, y = Seedling_Ht_cm) +
+ggplot(SPAD_Data) + 
+  aes(Num_leaves, log(Leaf_SPAD)) +
   geom_point()
 
-Height_Moisture_AfterStorm |>
-  ggplot() +
-  aes(x = VWC_perc, y = Seedling_Ht_cm) +
-  geom_point()
+# Lol, maybe there is a relationship or SPAD numbers for coast live oak seedlings just oscillate around 32. There are a couple of low SPAD readings for those with few leaves.
 ```
 
-Honestly, it's hard to tell from the scatter plots alone if there's any relationship between seedling height and soil moisture. The second set with soil moisture on the X and seedling height on the Y looks a bit more promising.
-
-### Survival by Treatment
-
-Lastly, for fun, I want to know how many seedlings survived and died in each treatment using the Height Data.
-
-```{r}
-# Create a new data object.
-Height_Data_Survival <- Height_Data_Raw |>
-  filter(Data_Entered_By == "KB" | 
-           Data_Entered_By == "DG") |>
-  select(Block, Tag_Num, Treatment, Sapling_AB_etc, Seedling_Ht_cm, Dead_Alive, Notes)
-
-# Do the process to replace "OA" with "OS" again.
-conditions <- c("OA")
-replacement_values <- c("OS")
-
-Height_Data_Survival$Treatment <- replace(Height_Data_Survival$Treatment, Height_Data_Survival$Treatment %in% conditions, replacement_values)
-
-Height_Data_Survival
-
-# Use group_by to know survival counts of each treatment.
-Height_Data_Survival |>
-  group_by(Treatment, Dead_Alive) |>
-  count()
-```
-
-Despite having taller seedlings (see ANOVA section), the open space (also called "open area") treatment also had the highest seedling death rate of the 4 treatments. The "SA" salvia apiana treatment is also included.
-
-## ANOVA (Height-Treatment)
-
-My question is: **Does treatment affect oak seedling height?**
-
-My null and alternative hypotheses are:
-
-- **H(null):** Treatment does not significantly affect oak seedling height.
-
-- **H(alt):** At least one treatment does significantly affect oak seedling height.
-
-Variables include oak seedling height ("Seedling_Ht_cm" - continuous, response) and treatment ("Treatment" - categorical, predictor).
-
-### Assumption/Normality Tests
-
-```{r}
-view(Height_Data_Raw)
-
-Height_Data
-```
-
-### Statistical Tests
-
-First, I created a model and did a Shapiro-Wilkes Test to test for normality, as well as a Bartlett's Test to see if variance differs among treatments:
-
-```{r}
-# Create the linear model
-height_model <- lm(Seedling_Ht_cm ~ Treatment, data = Height_Data)
-
-# Q-Q Plot
-plot(height_model, which = 2)
-
-# This doesn't look quite right. The data is not normally distributed.
-
-# Shapiro-Wilkes Test to test whether the distribution of data is different from the normal distribution.
-shapiro.test(height_model$residuals)
-
-# The p-value is far smaller than 0.05, so the distribution of the data is not normal and requires a transformation or Kruskall-Wallis test.
-
-# Bartlett Test to see if variance differs among treatments.
-bartlett.test(Seedling_Ht_cm~Treatment, data = Height_Data)
-
-# The p-value is very small, so the variance differs significantly among treatments.
-```
-
-The seedling height data is not normally distributed. I tried a log transformation:
-
-```{r}
-# Transform the height data to achieve normality. First, create a new model with log height.
-
-logheight_model <- lm(log(Seedling_Ht_cm) ~ Treatment, data = Height_Data)
-
-# Boxplot of seedling height as a response to treatment.
-Height_Data |> ggplot() + 
-  aes(x = Treatment, y = log(Seedling_Ht_cm)) +
-  geom_boxplot()
-
-# Q-Q plot for logheight_model
-plot(logheight_model, which = 2)
-
-# This still doesn't look like it is normally distributed.
-
-
-# Shapiro-Wilkes Test to test whether the distribution of the logged data is different from the normal distribution.
-
-shapiro.test(logheight_model$residuals)
-#The p-value is not as small, but it's still smaller than 0.05. So, this data is definitely not normally distributed and I should try something different.
-```
-
-Even with a log transformation, the seedling height data is not normally distributed. So, I perform a Kruskal-Wallis Test for ANOVA with non-parametric data:
-
-```{r}
-# Kruskall-Wallis Test for seedling height ~ treatment.
-kruskal.test(Seedling_Ht_cm~Treatment, data = Height_Data)
-
-# The p-value is very small! The median of at least one treatment is statistically different than the medians of the other treatments. Awesome.
-
-# Print the results to an ANOVA table:
-anova(height_model)
-```
-
-There is a difference between at least one treatment, and we have an ANOVA table! Next I do a Tukey HSD test to see which treatments differ from each other:
-
-```{r}
-# Tukey Honest Significance Difference Test to see which pairs differ significantly from each other.
-
-TukeyHSD(aov(Seedling_Ht_cm ~ Treatment, data = Height_Data))
-```
-
-So the seedling heights between NR and AC are significantly different (p = 0.0000092), as well as NR and DT (p = 0.0000699). Interestingly, seedling heights between OS and NR are different too, but the p-value is slightly above 0.05.
-
-So, in blocks 001-008, the oak seedlings in the Adult Canopy and Downed Tree treatments are shorter than the Natural Recruits. Now I wonder, why?
-
-### Figure(s)
-
-But first, figures. I'm struggling to understand which figure would be best to show non-parametric data (would it be helpful to focus on the mean heights of each treatment?), so I'm going to go with the annotated boxplot for now.
-
-```{r}
-# What I want to create is a boxplot of seedling height as a response to treatment, with added labels from the ANOVA and a new scale on the y-axis going to 120.
-
-Height_Data |> ggplot() + 
-  aes(x = factor(Treatment, levels = c("AC", "DT", "OS", "NR")), y = Seedling_Ht_cm) +
-  geom_boxplot() +
-  ylim(0, 120) +
-  geom_text(
-    label = c("A", "A", "AB", "B"),
-    position = position_dodge(0.9),
-    aes(y = 100, x = Treatment),
-    vjust = -0.5,
-    size = 3) +
-  ylim(0, 120)
-
-# I cannot figure figure this one out! :(
-```
-
-## ANOVA (Soil Moisture-Treatment)
-
-### Assumption/Normality Tests
-
-```{r}
-
-```
-
-### Statistical Tests
-
-```{r}
-
-```
-
-### Figure(s)
-
-```{r}
-
-```
-
-## Regression (SPAD-Num_leaves)
+## Regression (SPAD-Num_leaves) (not using anymore)
 
 My question is: **Do oak seedlings with more leaves have higher SPAD values?**
 
@@ -437,10 +483,10 @@ NOTE: I had originally done my regression hypothesis and exploratory data analys
 ### Assumption/Normality Test
 
 ```{r}
-# Open the cleaned data for reference.
-SPAD_Data
+#Open the cleaned data for reference. 
+SPAD_Data  
 
-# Create histograms for each variable to assess normality.
+# Create histograms for each variable to assess normality. 
 hist(SPAD_Data$Num_leaves)
 hist(SPAD_Data$Leaf_SPAD)
 ```
@@ -451,7 +497,6 @@ Num_leaves is skewed, while Leaf_SPAD looks like it could be normally distribute
 SPAD.lm <- lm(Leaf_SPAD ~ Num_leaves, data = SPAD_Data)
 plot(SPAD.lm)
 plot(SPAD.lm, which = 1)
-
 # This looks like the variance is roughly equal across the data.
 ```
 
@@ -460,17 +505,15 @@ plot(SPAD.lm, which = 1)
 Because I think the data is normally distributed, I'll do a simple linear regression (Pearson's product moment test).
 
 ```{r}
-SPAD_Data
+SPAD_Data  
 
-# Reminding myself what the cor.test is because I'm having trouble.
-?cor.test
+# Reminding myself what the cor.test is because I'm having trouble. 
+?cor.test  
 
-# I'm having trouble getting any results from this test, so I tried switching the x and y around.
+# I'm having trouble getting any results from this test, so I tried switching the x and y around. 
 cor.test(Num_leaves, Leaf_SPAD, data = SPAD_Data, method = "spearman")
-
-cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")
-
-# Unfortunately, R is telling me that whichever variable I put in the "X" location for this test is "not found" as an object. I need help fixing this.
+cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")  
+# Unfortunately, R is telling me that whichever variable I put in the "X" location for this test is "not found" as an object. I need help fixing this.  
 
 SPAD_CorSpear <- # Save whatever test ends up working eventually to this object.
 ```
@@ -478,88 +521,10 @@ SPAD_CorSpear <- # Save whatever test ends up working eventually to this object.
 Lastly, I will want to figure out the rho coefficient, p-value, slope, and intercept of the line. However, I'm not sure that this line of investigation has a strong enough relationship to warrant going beyond correlation to regression. I think a correlation might even be a stretch with what I have.
 
 ```{r}
-
 ```
 
 ### Figure(s)
 
 ```{r}
 # Alas, I don't think I'm able to get this far with what I have. Back to square two.
-```
-
-## Regression (Soil Moisture-Seedling Height)
-
-Okay, I decided to try this after all and to facet the regression tests and figures by date that the data was collected - before (Blocks 001-004) or after (Blocks 005-008) the storm.
-
-My question is: **Are oak seedlings taller in treatments with higher soil moisture?**
-
-My null and alternative hypotheses are:
-
-- **H(null):** There is not a linear relationship between soil moisture and seedling height.u
-
-- **H(alt):** There is a linear relationship between soil moisture and seedling height.
-
-The two continuous variables are "Seedling_Ht_cm" (predictor) and "VWC_perc" (response).
-
-### Assumption/Normality Test
-
-```{r}
-# Open the cleaned data frame for reference.
-Height_Moisture_BeforeStorm
-
-# Create histograms for each variable to assess normality.
-hist(Height_Moisture_BeforeStorm$Seedling_Ht_cm)
-hist(Height_Moisture_BeforeStorm$VWC_perc)
-
-# Repeat the process for the After Storm data.
-Height_Moisture_AfterStorm
-
-hist(Height_Moisture_AfterStorm$Seedling_Ht_cm)
-hist(Height_Moisture_AfterStorm$VWC_perc)
-```
-
-```{r}
-VWC.lm_BeforeStorm <- lm(VWC_perc ~ Seedling_Ht_cm, data = Height_Moisture_BeforeStorm)
-plot(VWC.lm)
-plot(VWC.lm, which = 1)
-```
-
-```{r}
-VWC.lm_AfterStorm <- lm(VWC_perc ~ Seedling_Ht_cm, data = Height_Moisture_AfterStorm)
-plot(VWC.lm)
-plot(VWC.lm, which = 1)
-```
-
-These plots kind of look exactly the same... I think I did something wrong.
-
-### Statistical Tests
-
-```{r}
-# I'm getting the same error as above with cor.test.
-```
-
-### Figure(s)
-
-```{r}
-
-```
-
-## Regression (Height-Num Leaves)
-
-### Assumption/Normality Tests
-
-```{r}
-
-```
-
-### Statistical Tests
-
-```{r}
-
-```
-
-### Figure(s)
-
-```{r}
-
 ```
