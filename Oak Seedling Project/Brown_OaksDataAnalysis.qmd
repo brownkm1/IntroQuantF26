@@ -286,23 +286,21 @@ So the seedling heights between OS and AC are different (p = 0.0073657), as well
 
 ### Figure(s)
 
-I want to show an annotated boxplot
-
 ```{r}
 # What I want to create is a boxplot of seedling height as a response to treatment, with added labels from the ANOVA and a new scale on the y-axis going to 120.
+
+# try bar plot or point with labels
 
 Height_Data |> ggplot() + 
   aes(x = Treatment, y = Seedling_Ht_cm) +
   geom_boxplot() +
-  geom_text(
+  geom_label(
     label = c("A", "A", "B"),
     position = position_dodge(0.9),
-    aes(y = 100, x = 1),
+    aes(x = Treatment, y = 60),
     vjust = -0.5,
     size = 3) +
-  ylim(0, 120)
-
-# I cannot figure figure this one out! :(
+  ylim(0, 70)
 ```
 
 ## Regression (Soil Moisture-Seedling Height)
@@ -353,17 +351,40 @@ plot(VWC.lm_AfterStorm, which = 1)
 ### Statistical Tests
 
 ```{r}
+# For  moisture and height data from all blocks.
+cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_Joined, method = "pearson")
+```
+
+```{r}
+# For blocks 001-004.
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_BeforeStorm, method = "pearson")
 ```
 
 ```{r}
+# For blocks 005-008.
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_AfterStorm, method = "pearson")
 ```
+
+Okay, so neither of these are great candidates for a linear regression. There's a higher chance of a relationship existing between seedling height and soil moisture in blocks 005-008 after the storm.
 
 ### Figure(s)
 
 ```{r}
+# Same thing as above, and I'm not including a line of best fit because neither grouping had a strong relationship between soil moisture and seedling height.
+Height_Moisture_Joined |>
+  ggplot() +
+  aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
+  geom_point()
 
+Height_Moisture_BeforeStorm |>
+  ggplot() +
+  aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
+  geom_point()
+
+Height_Moisture_AfterStorm |>
+  ggplot() +
+  aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
+  geom_point()
 ```
 
 ## ANOVA (Soil Moisture-Treatment)
