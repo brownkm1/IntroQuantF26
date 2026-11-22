@@ -91,10 +91,11 @@ ggplot(Height_Data) +
 #### Data Cleaning
 
 ```{r}
-# This filters out 210 empty rows 1 additional row with no soil moisture measurements.
+# This filters out 210 empty rows, 1 additional row with no soil moisture measurements, and measurements for the NR treatment.
 Moisture_Data_Longer <- Moist_Data_Raw |>
   filter(Entered_By == "RK" | Entered_By == "NC") |>
   filter(VWC1_perc != "NA") |>
+  filter(Treatment != "NR") |>
   
   # This selects the only columns I need and changes the VWC values from character to numeric.
   select(Block, Treatment, VWC1_perc, VWC2_perc, VWC3_perc) |>
@@ -287,20 +288,31 @@ So the seedling heights between OS and AC are different (p = 0.0073657), as well
 ### Figure(s)
 
 ```{r}
-# What I want to create is a boxplot of seedling height as a response to treatment, with added labels from the ANOVA and a new scale on the y-axis going to 120.
+# I created a bar plot with the ANOVA results labeled.
 
-# try bar plot or point with labels
+height_summary <- Height_Data |> 
+  group_by(Treatment) |>
+  summarise(mean = mean(Seedling_Ht_cm), 
+            se = sd(Seedling_Ht_cm)/sqrt(n()))
 
-Height_Data |> ggplot() + 
-  aes(x = Treatment, y = Seedling_Ht_cm) +
-  geom_boxplot() +
+height_summary
+
+ggplot(height_summary) + 
+  aes(x = Treatment, y = mean) + 
+  geom_col(aes(fill = Treatment)) + 
+  geom_errorbar(aes(ymin = (mean-se), ymax = (mean + se)), width = 0.1) +
   geom_label(
     label = c("A", "A", "B"),
     position = position_dodge(0.9),
-    aes(x = Treatment, y = 60),
+    aes(x = Treatment, y = 30),
     vjust = -0.5,
     size = 3) +
-  ylim(0, 70)
+  ylim(0, 32) +
+  ylab("Mean seedling height (cm) ± 1 SE") +
+  xlab("Microclimate treatment")
+
+# Export the figure
+
 ```
 
 ## Regression (Soil Moisture-Seedling Height)
@@ -392,23 +404,39 @@ Height_Moisture_AfterStorm |>
 ### Assumption/Normality Tests
 
 ```{r}
+# View the longer moisture data table and a boxplot and histogram of the data.
+Moisture_Data_Longer
+
+Moisture_Data_Longer |> ggplot() + 
+  aes(x = Treatment, y = VWC_perc) +
+  geom_boxplot()
+
+ggplot(Moisture_Data_Longer) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 1)
 ```
 
 ### Statistical Tests
 
 ```{r}
-```
+# Create the linear model
+moisture_model <- lm(VWC_perc ~ Treatment, data = Moisture_Data_Longer)
 
-### Figure(s)
+# Q-Q Plot
+plot(height_model, which = 2)
+```
 
 ```{r}
+# Print the results to an ANOVA table:
+anova(moisture_model)
 ```
+
+No difference in soil moisture (volumetric water content) between treatments.
 
 # NOT USING ANYMORE
 
 ### Soil Moisture Data
 
-#### Data Cleaning
+#### Data Cleaning (i improved this above by pivoting longer)
 
 ```{r}
 # Clean Moist_Data_Raw
@@ -438,8 +466,6 @@ Moisture_Data
 
 #### Data Cleaning
 
-I looked at the data and chose to pare the SPAD readings down to the first three leaves measured, because some alive oak seedlings had only three readings. I hope to either mutate an average that accounts for Leaf4, Leaf5, and Leaf6 when observations have those values. OR to pivot the table longer so that each Leaf value is its own observation including Num_leaves for each. I'm choosing to do this quick average for the sake of time.
-
 ```{r}
 view(SPAD_Data_Raw)
 ```
@@ -450,6 +476,7 @@ SPAD_Data <- SPAD_Data_Raw |>
   filter(Entered_By == "MF" | 
            Entered_By == "AL") |>
   filter(Dead_Alive != "Dead") |>
+  filter(Leaf1 != "NA") |>
   
   # Selects relevant columns and sorts the observations by tag number.
   select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves) |>
@@ -528,24 +555,8 @@ Because I think the data is normally distributed, I'll do a simple linear regres
 ```{r}
 SPAD_Data  
 
-# Reminding myself what the cor.test is because I'm having trouble. 
-?cor.test  
+cor.test(~ Num_leaves + Leaf_SPAD, data = SPAD_Data, method = "pearson")
 
-# I'm having trouble getting any results from this test, so I tried switching the x and y around. 
-cor.test(Num_leaves, Leaf_SPAD, data = SPAD_Data, method = "spearman")
-cor.test(Leaf_SPAD, Num_leaves, data = SPAD_Data, method = "spearman")  
-# Unfortunately, R is telling me that whichever variable I put in the "X" location for this test is "not found" as an object. I need help fixing this.  
+cor.test(~ Leaf_SPAD + Num_leaves, data = SPAD_Data, method = "pearson")
 
-SPAD_CorSpear <- # Save whatever test ends up working eventually to this object.
-```
-
-Lastly, I will want to figure out the rho coefficient, p-value, slope, and intercept of the line. However, I'm not sure that this line of investigation has a strong enough relationship to warrant going beyond correlation to regression. I think a correlation might even be a stretch with what I have.
-
-```{r}
-```
-
-### Figure(s)
-
-```{r}
-# Alas, I don't think I'm able to get this far with what I have. Back to square two.
 ```
