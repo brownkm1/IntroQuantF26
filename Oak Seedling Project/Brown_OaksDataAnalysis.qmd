@@ -286,7 +286,7 @@ TukeyHSD(aov(Seedling_Ht_cm ~ Treatment, data = Height_Data))
 
 So the seedling heights between OS and AC are different (p = 0.0073657), as well as OS and DT (p = 0.0338525).
 
-### Figure(s)
+### Figure
 
 ```{r}
 # Create a summary table.
@@ -316,6 +316,10 @@ Height_ANOVA_plot <- ggplot(height_summary) +
 # View the ANOVA figure
 Height_ANOVA_plot
 
+
+```
+
+```{r}
 # Export the figure
 tiff("ANOVA5.tiff", units = "in", width = 5.5, height = 3.25, res = 300)
 print(Height_ANOVA_plot)
@@ -357,14 +361,12 @@ hist(Height_Moisture_AfterStorm$VWCmean_perc)
 # For blocks 001-004 before the storm.
 VWC.lm_BeforeStorm <- lm(VWCmean_perc ~ Seedling_Ht_cm, data = Height_Moisture_BeforeStorm)
 plot(VWC.lm_BeforeStorm)
-plot(VWC.lm_BeforeStorm, which = 1)
 ```
 
 ```{r}
 # For blocks 005-008 after the storm.
 VWC.lm_AfterStorm <- lm(VWCmean_perc ~ Seedling_Ht_cm, data = Height_Moisture_AfterStorm)
 plot(VWC.lm_AfterStorm)
-plot(VWC.lm_AfterStorm, which = 1)
 ```
 
 ### Statistical Tests
@@ -372,50 +374,105 @@ plot(VWC.lm_AfterStorm, which = 1)
 ```{r}
 # For  moisture and height data from all blocks.
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_Joined, method = "pearson")
+
+# Get the R^2 number
+height_moisture.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_Joined)
+
+summary(height_moisture.lm)$r.squared
 ```
 
 ```{r}
 # For blocks 001-004.
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_BeforeStorm, method = "pearson")
+
+# Get the R^2 number
+beforestorm.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_BeforeStorm)
+
+summary(beforestorm.lm)$r.squared
 ```
 
 ```{r}
 # For blocks 005-008.
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_AfterStorm, method = "pearson")
+
+# Get the R^2 number
+afterstorm.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_AfterStorm)
+
+summary(afterstorm.lm)$r.squared
 ```
 
 Okay, so none of these are great candidates for a linear regression. There's a higher chance of a relationship existing between seedling height and soil moisture in blocks 005-008 after the storm.
 
-### Figure(s)
+### Figures
 
 ```{r}
-# Same thing as above, and I'm not including a line of best fit because neither grouping had a strong relationship between soil moisture and seedling height.
-Height_Moisture_Joined |>
+# Scatter plots with dashed lines of fit.
+Height_Moisture_plot <- Height_Moisture_Joined |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
   ylab("Seedling height (cm)") +
   xlab("Volumetric water content (%)") +
-  labs(title = "All blocks")
+  labs(title = "All blocks") +
+  geom_text(x = 12.85, y= 50, 
+            label = paste("p = 0.87")) +
+  geom_text(x = 13.8, y= 45, 
+            label = paste("R^2 = 0.0005"))
 
-Height_Moisture_BeforeStorm |>
+BeforeStorm_plot <- Height_Moisture_BeforeStorm |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
   ylab("Seedling height (cm)") +
   xlab("Volumetric water content (%)") +
-  ggtitle("Blocks 001-004 measured pre-storm")
+  ggtitle("Blocks 001-004 (pre-storm)") +
+  geom_text(x = 1.99, y= 50, 
+            label = paste("p = 0.20")) +
+  geom_text(x = 2.09, y= 45, 
+            label = paste("R^2 = 0.074"))
 
-Height_Moisture_AfterStorm |>
+AfterStorm_plot <- Height_Moisture_AfterStorm |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
   ylab("Seedling height (cm)") +
   xlab("Volumetric water content (%)") +
-  ggtitle("Blocks 005-008 measured post-storm")
+  ggtitle("Blocks 005-008 (post-storm)") +
+  geom_text(x = 14.75, y= 50, 
+            label = paste("p = 0.073")) +
+  geom_text(x = 14.88, y= 45, 
+            label = paste("R^2 = 0.11"))
+
+# View the plots
+Height_Moisture_plot
+BeforeStorm_plot
+AfterStorm_plot
+```
+
+```{r}
+# I want to combine the plots into one figure that share the same x and y axis labels. I heard about a package called "patchwork" on the internet that can do this
+install.packages('patchwork')
+library(patchwork)
+library(ggplot2)
+```
+
+```{r}
+# Combine the three height-moisture plots and combine the labels for the axes.
+Combined_moisture_plots <- Height_Moisture_plot / BeforeStorm_plot / AfterStorm_plot +
+  plot_layout(axes = "collect")
+
+# View the combined plot.
+Combined_moisture_plots
+```
+
+```{r}
+# Export the figure
+tiff("Cor8.tiff", units = "in", width = 4, height = 8, res = 300)
+print(Combined_moisture_plots)
+dev.off()
 ```
 
 ## ANOVA (Soil Moisture-Treatment)
