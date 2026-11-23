@@ -576,5 +576,3 @@ If you don't like how that looks all crowded, you can also just pick a height to
 ```{r}
 ggplot()
 ```
-
-### 

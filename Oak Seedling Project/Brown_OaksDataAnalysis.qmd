@@ -73,7 +73,7 @@ Height_Data |>
 ```{r}
 # Boxplot of seedling height as a response to treatment.
 Height_Data |> ggplot() + 
-  aes(x = Treatment, y = Seedling_Ht_cm) +
+  aes(x = Treatment, y = Seedling_Ht_cm, fill = Treatment) +
   geom_boxplot()
 
 # Make a histogram graph to visualize the cleaned data
@@ -147,7 +147,8 @@ Average_VWC_BlockTreatment
 # Now, I want to join the VWC_perc value from Moisture_Data to each seedling in Height_Data based on the seedling's Block and Treatment. 
 Height_Moisture_Joined <- Height_Data |>
   left_join(Average_VWC_BlockTreatment) |>
-  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWCmean_perc)
+  select(Block, Treatment, Tag_Num, Sapling_AB_etc, Seedling_Ht_cm, VWCmean_perc) |>
+  filter(VWCmean_perc != "NA")
 
 # View the tibble for the new data frame.
 Height_Moisture_Joined
@@ -383,7 +384,7 @@ cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_BeforeStorm, me
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_AfterStorm, method = "pearson")
 ```
 
-Okay, so neither of these are great candidates for a linear regression. There's a higher chance of a relationship existing between seedling height and soil moisture in blocks 005-008 after the storm.
+Okay, so none of these are great candidates for a linear regression. There's a higher chance of a relationship existing between seedling height and soil moisture in blocks 005-008 after the storm.
 
 ### Figure(s)
 
@@ -392,17 +393,29 @@ Okay, so neither of these are great candidates for a linear regression. There's 
 Height_Moisture_Joined |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+  ylab("Seedling height (cm)") +
+  xlab("Volumetric water content (%)") +
+  labs(title = "All blocks")
 
 Height_Moisture_BeforeStorm |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+  ylab("Seedling height (cm)") +
+  xlab("Volumetric water content (%)") +
+  ggtitle("Blocks 001-004 measured pre-storm")
 
 Height_Moisture_AfterStorm |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+  ylab("Seedling height (cm)") +
+  xlab("Volumetric water content (%)") +
+  ggtitle("Blocks 005-008 measured post-storm")
 ```
 
 ## ANOVA (Soil Moisture-Treatment)
@@ -414,8 +427,10 @@ Height_Moisture_AfterStorm |>
 Moisture_Data_Longer
 
 Moisture_Data_Longer |> ggplot() + 
-  aes(x = Treatment, y = VWC_perc) +
-  geom_boxplot()
+  aes(x = Treatment, y = VWC_perc, fill = Treatment) +
+  geom_boxplot() +
+  ylab("Volumetric water content (%)") +
+  xlab("Microclimate treatment")
 
 ggplot(Moisture_Data_Longer) +
   geom_histogram(mapping = aes(x = VWC_perc), binwidth = 1)
