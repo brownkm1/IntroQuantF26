@@ -15,6 +15,7 @@ editor: visual
 ```{r}
 library(tidyverse)
 library(readxl)
+library(ggplot2)
 ```
 
 ### Import all the data
@@ -129,11 +130,11 @@ Average_VWC_BlockTreatment
 ```{r}
 # View VWC_perc column in a histogram
 ggplot(Moisture_Data_Longer) +
-  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2)
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.5)
 
 # View VWC_perc column in a histogram
 ggplot(Moisture_Data_Longer) +
-  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.2) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 0.5) +
   facet_wrap("Treatment")
 ```
 
@@ -315,8 +316,6 @@ Height_ANOVA_plot <- ggplot(height_summary) +
 
 # View the ANOVA figure
 Height_ANOVA_plot
-
-
 ```
 
 ```{r}
@@ -456,7 +455,6 @@ AfterStorm_plot
 # I want to combine the plots into one figure that share the same x and y axis labels. I heard about a package called "patchwork" on the internet that can do this
 install.packages('patchwork')
 library(patchwork)
-library(ggplot2)
 ```
 
 ```{r}
@@ -483,11 +481,13 @@ dev.off()
 # View the longer moisture data table and a boxplot and histogram of the data.
 Moisture_Data_Longer
 
-Moisture_Data_Longer |> ggplot() + 
+Moisture_boxplot <- Moisture_Data_Longer |> ggplot() + 
   aes(x = Treatment, y = VWC_perc, fill = Treatment) +
   geom_boxplot() +
   ylab("Volumetric water content (%)") +
   xlab("Microclimate treatment")
+
+Moisture_boxplot
 
 ggplot(Moisture_Data_Longer) +
   geom_histogram(mapping = aes(x = VWC_perc), binwidth = 1)
@@ -509,6 +509,13 @@ anova(moisture_model)
 ```
 
 No difference in soil moisture (volumetric water content) between treatments.
+
+```{r}
+# Export the figure just in case I want to use it.
+tiff("Moisture_boxplot.tiff", units = "in", width = 5.5, height = 3.25, res = 300)
+print(Moisture_boxplot)
+dev.off()
+```
 
 # NOT USING ANYMORE
 
