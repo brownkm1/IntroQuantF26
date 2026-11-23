@@ -343,6 +343,13 @@ The two continuous variables are "Seedling_Ht_cm" (predictor) and "VWCmean_perc"
 
 ```{r}
 # Open the cleaned data frame for reference.
+Height_Moisture_Joined
+
+# Create histograms for each variable to assess normality.
+hist(Height_Moisture_Joined$Seedling_Ht_cm)
+hist(Height_Moisture_Joined$VWCmean_perc)
+
+# Repeat the process for the Before Storm data.
 Height_Moisture_BeforeStorm
 
 # Create histograms for each variable to assess normality.
@@ -373,6 +380,8 @@ plot(VWC.lm_AfterStorm)
 ```{r}
 # For  moisture and height data from all blocks.
 cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_Joined, method = "pearson")
+
+?cor.test
 
 # Get the R^2 number
 height_moisture.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_Joined)
