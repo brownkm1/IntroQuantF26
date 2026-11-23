@@ -320,7 +320,7 @@ Height_ANOVA_plot
 
 ```{r}
 # Export the figure
-tiff("ANOVA5.tiff", units = "in", width = 5.5, height = 3.25, res = 300)
+png("ANOVA_height.png", units = "in", width = 5.5, height = 3.25, res = 300)
 print(Height_ANOVA_plot)
 dev.off()
 ```
@@ -477,7 +477,7 @@ Combined_moisture_plots
 
 ```{r}
 # Export the figure
-tiff("Cor8.tiff", units = "in", width = 4, height = 8, res = 300)
+png("Cor.png", units = "in", width = 4, height = 8, res = 300)
 print(Combined_moisture_plots)
 dev.off()
 ```
@@ -494,11 +494,30 @@ Moisture_boxplot <- Moisture_Data_Longer |> ggplot() +
   aes(x = Treatment, y = VWC_perc, fill = Treatment) +
   geom_boxplot() +
   ylab("Volumetric water content (%)") +
-  xlab("Microclimate treatment")
+  xlab("Microclimate treatment") +
+  ggtitle("Soil moisture in all blocks")
 
 Moisture_boxplot
 
 ggplot(Moisture_Data_Longer) +
+  geom_histogram(mapping = aes(x = VWC_perc), binwidth = 1)
+
+# Now do the process for just blocks 005-008 after the storm.
+Moisture_Data_Longer_AfterStorm <- Moisture_Data_Longer |>
+  filter(Block == "005" | Block == "006" | Block == "007" | Block == "008")
+
+Moisture_Data_Longer_AfterStorm
+
+Moisture_afterstorm_boxplot <- Moisture_Data_Longer_AfterStorm |> ggplot() + 
+  aes(x = Treatment, y = VWC_perc, fill = Treatment) +
+  geom_boxplot() +
+  ylab("Volumetric water content (%)") +
+  xlab("Microclimate treatment") +
+  ggtitle("Soil moisture in blocks 005-008")
+
+Moisture_afterstorm_boxplot
+
+ggplot(Moisture_Data_Longer_AfterStorm) +
   geom_histogram(mapping = aes(x = VWC_perc), binwidth = 1)
 ```
 
@@ -509,148 +528,82 @@ ggplot(Moisture_Data_Longer) +
 moisture_model <- lm(VWC_perc ~ Treatment, data = Moisture_Data_Longer)
 
 # Q-Q Plot
-plot(height_model, which = 2)
+plot(moisture_model, which = 2)
+
+# Repeat the process for just blocks 005-008 (I did this originally for blocks 001-004, and the ANOVA was insignificant).
+moisture_model_afterstorm <- lm(VWC_perc ~ Treatment, data = Moisture_Data_Longer_AfterStorm)
+
+# Q-Q Plot
+plot(moisture_model_afterstorm, which = 2)
 ```
 
 ```{r}
 # Print the results to an ANOVA table:
 anova(moisture_model)
+
+# Repeat but only for blocks 005-008.
+anova(moisture_model_afterstorm)
 ```
 
-No difference in soil moisture (volumetric water content) between treatments.
+No difference in soil moisture (volumetric water content) between treatments for all blocks. Export the boxplot for potential use in the paper:
 
 ```{r}
-# Export the figure just in case I want to use it.
+# Export the boxplot figure for all blocks just in case I want to use it.
 tiff("Moisture_boxplot.tiff", units = "in", width = 5.5, height = 3.25, res = 300)
 print(Moisture_boxplot)
 dev.off()
 ```
 
-# NOT USING ANYMORE
-
-### Soil Moisture Data
-
-#### Data Cleaning (i improved this above by pivoting longer)
+There was a difference in soil moisture between treatments, though, for blocks 005-008 after the storm. Let's find out which one(s) were different.
 
 ```{r}
-# Clean Moist_Data_Raw
-
-# This filters out 210 empty rows,  1 additional row with no soil moisture measurements, and 1 additional row with no second or third measurements.
-Moisture_Data <- Moist_Data_Raw |>
-  filter(Entered_By == "RK" | Entered_By == "NC") |>
-  filter(VWC1_perc != "NA") |>
-  filter(VWC2_perc != "NA") |>
-  
-  # Select only relevant columns and arrange the data by block and treatment.
-  select(Block, Treatment, VWC1_perc, PER1_ms, VWC2_perc, PER2_ms, VWC3_perc, PER3_ms) |>
-  arrange(Block, Treatment) |>
-  
-  # This changes the VWC and PER columns from character to numeric.
-  mutate(VWC1_perc = as.numeric(VWC1_perc), PER1_ms = as.numeric(PER1_ms), VWC2_perc = as.numeric(VWC2_perc), PER2_ms = as.numeric(PER2_ms), VWC3_perc = as.numeric(VWC3_perc), PER3_ms = as.numeric(PER3_ms)) |>
-  
-  # There are  3 VWC and PER measurements per observation, so I created 2 new columns to have an overall value of each per observation.
-  mutate(VWC_perc = (VWC1_perc + VWC2_perc + VWC3_perc)/3, PER_ms = (PER1_ms + PER2_ms + PER3_ms)/3)
-
-
-# View the tibble to make sure cleaning works
-Moisture_Data
+TukeyHSD(aov(VWC_perc ~ Treatment, data = Moisture_Data_Longer_AfterStorm))
 ```
 
-### SPAD Data (no longer using)
-
-#### Data Cleaning
+### Figures
 
 ```{r}
-view(SPAD_Data_Raw)
+# Create a summary table.
+moisture_afterstorm_summary <- Moisture_Data_Longer_AfterStorm |> 
+  group_by(Treatment) |>
+  summarise(mean = mean(VWC_perc), 
+            se = sd(VWC_perc)/sqrt(n()))
+
+# View the summary table.
+moisture_afterstorm_summary
+
+# Create a bar plot with the ANOVA results.
+Moisture_ANOVA_plot <- ggplot(moisture_afterstorm_summary) + 
+  aes(x = Treatment, y = mean) + 
+  geom_col(aes(fill = Treatment)) + 
+  geom_errorbar(aes(ymin = (mean-se), ymax = (mean + se)), width = 0.1) +
+  geom_label(
+    label = c("A", "AB", "B"),
+    position = position_dodge(0.9),
+    aes(x = Treatment, y = 18),
+    vjust = -0.5,
+    size = 3) +
+  ylim(0, 20) +
+  ylab("Mean volumetric water content (%) ± 1 SE") +
+  xlab("Microclimate treatment")
+
+# View the ANOVA figure
+Moisture_ANOVA_plot
 ```
 
 ```{r}
-# This filters out 355 empty rows and all observations for dead saplings.
-SPAD_Data <- SPAD_Data_Raw |>
-  filter(Entered_By == "MF" | 
-           Entered_By == "AL") |>
-  filter(Dead_Alive != "Dead") |>
-  filter(Leaf1 != "NA") |>
-  
-  # Selects relevant columns and sorts the observations by tag number.
-  select(Block, Treatment, Tag_Num, Leaf1, Leaf2, Leaf3, Num_leaves) |>
-  arrange(Block, Treatment) |>
-  
-  # Create a new column with a SPAD reading that averages the readings for the first 3 leaves on each  
-  mutate(Leaf_SPAD = (Leaf1 + Leaf2 + Leaf3)/3) |>
-  filter(Leaf_SPAD != "NA" & Num_leaves != "NA")
-
-
-# View the tibble to make sure cleaning works:
-SPAD_Data
+# Export the ANOVA figure.
+png("ANOVA_moisture.png", units = "in", width = 5.5, height = 3.75, res = 300)
+print(Moisture_ANOVA_plot)
+dev.off()
 ```
 
-#### Data Visualization
-
-Quick scatterplot to visualize SPAD leaf readings:
-
 ```{r}
-ggplot(SPAD_Data) + 
-  aes(Num_leaves, Leaf_SPAD) +
-  geom_point()
+# View the moisture boxplot from above, for which the ANOVA was insignificant.
+Moisture_boxplot
 
-# Perhaps there is a relationship here, but it might be easier to see with a log transformation.
-
-ggplot(SPAD_Data) + 
-  aes(log(Num_leaves), Leaf_SPAD) +
-  geom_point()
-
-
-ggplot(SPAD_Data) + 
-  aes(Num_leaves, log(Leaf_SPAD)) +
-  geom_point()
-
-# Lol, maybe there is a relationship or SPAD numbers for coast live oak seedlings just oscillate around 32. There are a couple of low SPAD readings for those with few leaves.
-```
-
-## Regression (SPAD-Num_leaves) (not using anymore)
-
-My question is: **Do oak seedlings with more leaves have higher SPAD values?**
-
-My null and alternative hypotheses are:
-
-- **H(null):** Oak seedlings with more leaves do not have higher SPAD values.
-
-- **H(alt):** Oak seedlings with more leaves do have higher SPAD values.
-
-The two continuous variables are "Num_leaves" (predictor) and "Leaf_SPAD" (response).
-
-NOTE: I had originally done my regression hypothesis and exploratory data analysis for soil moisture. But through the EDA, I decided I did not actually want to work with soil moisture. This is my first stab at SPAD and number of leaves, and I think I want to try some different things on a second time around with this data.
-
-### Assumption/Normality Test
-
-```{r}
-#Open the cleaned data for reference. 
-SPAD_Data  
-
-# Create histograms for each variable to assess normality. 
-hist(SPAD_Data$Num_leaves)
-hist(SPAD_Data$Leaf_SPAD)
-```
-
-Num_leaves is skewed, while Leaf_SPAD looks like it could be normally distributed. Let's check out the homoscedasticity.
-
-```{r}
-SPAD.lm <- lm(Leaf_SPAD ~ Num_leaves, data = SPAD_Data)
-plot(SPAD.lm)
-plot(SPAD.lm, which = 1)
-# This looks like the variance is roughly equal across the data.
-```
-
-### Statistical Tests
-
-Because I think the data is normally distributed, I'll do a simple linear regression (Pearson's product moment test).
-
-```{r}
-SPAD_Data  
-
-cor.test(~ Num_leaves + Leaf_SPAD, data = SPAD_Data, method = "pearson")
-
-cor.test(~ Leaf_SPAD + Num_leaves, data = SPAD_Data, method = "pearson")
-
+# Export the boxplot figure for all blocks just in case I want to use it.
+png("Moisture_boxplot.png", units = "in", width = 5.5, height = 3.25, res = 300)
+print(Moisture_boxplot)
+dev.off()
 ```
