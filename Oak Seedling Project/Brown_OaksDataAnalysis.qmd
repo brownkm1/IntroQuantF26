@@ -418,12 +418,12 @@ Okay, so none of these are great candidates for a linear regression. There's a h
 Height_Moisture_plot <- Height_Moisture_Joined |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+  geom_point(aes(color = Treatment)) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed", color = "black") +
   ylab("Seedling height (cm)") +
   xlab("Volumetric water content (%)") +
   labs(title = "All blocks") +
-  geom_text(x = 12.85, y= 50, 
+  geom_text(x = 12.7, y= 50, 
             label = paste("p = 0.87")) +
   geom_text(x = 13.8, y= 45, 
             label = paste("R^2 = 0.0005"))
@@ -431,12 +431,12 @@ Height_Moisture_plot <- Height_Moisture_Joined |>
 BeforeStorm_plot <- Height_Moisture_BeforeStorm |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+  geom_point(aes(color = Treatment)) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed", color = "black") +
   ylab("Seedling height (cm)") +
   xlab("Volumetric water content (%)") +
   ggtitle("Blocks 001-004 (pre-storm)") +
-  geom_text(x = 1.99, y= 50, 
+  geom_text(x = 1.97, y= 50, 
             label = paste("p = 0.20")) +
   geom_text(x = 2.09, y= 45, 
             label = paste("R^2 = 0.074"))
@@ -444,12 +444,12 @@ BeforeStorm_plot <- Height_Moisture_BeforeStorm |>
 AfterStorm_plot <- Height_Moisture_AfterStorm |>
   ggplot() +
   aes(x = VWCmean_perc, y = Seedling_Ht_cm) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+  geom_point(aes(color = Treatment)) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dashed", color = "black") +
   ylab("Seedling height (cm)") +
   xlab("Volumetric water content (%)") +
   ggtitle("Blocks 005-008 (post-storm)") +
-  geom_text(x = 14.75, y= 50, 
+  geom_text(x = 14.7, y= 50, 
             label = paste("p = 0.073")) +
   geom_text(x = 14.88, y= 45, 
             label = paste("R^2 = 0.11"))
@@ -469,7 +469,7 @@ library(patchwork)
 ```{r}
 # Combine the three height-moisture plots and combine the labels for the axes.
 Combined_moisture_plots <- Height_Moisture_plot / BeforeStorm_plot / AfterStorm_plot +
-  plot_layout(axes = "collect")
+  plot_layout(axes = "collect", guides = "collect")
 
 # View the combined plot.
 Combined_moisture_plots
@@ -477,7 +477,7 @@ Combined_moisture_plots
 
 ```{r}
 # Export the figure
-png("Cor.png", units = "in", width = 4, height = 8, res = 300)
+png("Cor.png", units = "in", width = 4.5, height = 8, res = 300)
 print(Combined_moisture_plots)
 dev.off()
 ```
