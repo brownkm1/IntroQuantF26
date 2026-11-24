@@ -386,7 +386,7 @@ cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_Joined, method 
 # Get the R^2 number
 height_moisture.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_Joined)
 
-summary(height_moisture.lm)$r.squared
+summary(height_moisture.lm)
 ```
 
 ```{r}
@@ -396,7 +396,7 @@ cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_BeforeStorm, me
 # Get the R^2 number
 beforestorm.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_BeforeStorm)
 
-summary(beforestorm.lm)$r.squared
+summary(beforestorm.lm)
 ```
 
 ```{r}
@@ -406,7 +406,7 @@ cor.test(~ VWCmean_perc + Seedling_Ht_cm, data = Height_Moisture_AfterStorm, met
 # Get the R^2 number
 afterstorm.lm <- lm(Seedling_Ht_cm ~ VWCmean_perc, data = Height_Moisture_AfterStorm)
 
-summary(afterstorm.lm)$r.squared
+summary(afterstorm.lm)
 ```
 
 Okay, so none of these are great candidates for a linear regression. There's a higher chance of a relationship existing between seedling height and soil moisture in blocks 005-008 after the storm.
@@ -425,8 +425,8 @@ Height_Moisture_plot <- Height_Moisture_Joined |>
   labs(title = "All blocks") +
   geom_text(x = 12.7, y= 50, 
             label = paste("p = 0.87")) +
-  geom_text(x = 13.8, y= 45, 
-            label = paste("R^2 = 0.0005"))
+  geom_text(x = 12.9, y= 45, 
+            label = paste("r = 0.022"))
 
 BeforeStorm_plot <- Height_Moisture_BeforeStorm |>
   ggplot() +
@@ -438,8 +438,8 @@ BeforeStorm_plot <- Height_Moisture_BeforeStorm |>
   ggtitle("Blocks 001-004 (pre-storm)") +
   geom_text(x = 1.97, y= 50, 
             label = paste("p = 0.20")) +
-  geom_text(x = 2.09, y= 45, 
-            label = paste("R^2 = 0.074"))
+  geom_text(x = 1.98, y= 45, 
+            label = paste("r = -0.27"))
 
 AfterStorm_plot <- Height_Moisture_AfterStorm |>
   ggplot() +
@@ -451,8 +451,8 @@ AfterStorm_plot <- Height_Moisture_AfterStorm |>
   ggtitle("Blocks 005-008 (post-storm)") +
   geom_text(x = 14.7, y= 50, 
             label = paste("p = 0.073")) +
-  geom_text(x = 14.88, y= 45, 
-            label = paste("R^2 = 0.11"))
+  geom_text(x = 14.47, y= 45, 
+            label = paste("r = 0.33"))
 
 # View the plots
 Height_Moisture_plot
